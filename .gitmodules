@@ -1,3 +1,6 @@
 [submodule "ns_policies/SCoBOts_framework"]
 	path = ns_policies/SCoBOts_framework
 	url = https://github.com/NiklasPaprotny/SCoBOts_framework.git
+[submodule "ns_policies/blendrl_framework"]
+	path = ns_policies/blendrl_framework
+	url = https://github.com/jeeen13/blendrl_framework.git
