@@ -1,0 +1,3 @@
+[submodule "ns_policies/SCoBOts_framework"]
+	path = ns_policies/SCoBOts_framework
+	url = https://github.com/NiklasPaprotny/SCoBOts_framework.git
