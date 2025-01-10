@@ -4,3 +4,6 @@
 [submodule "ns_policies/blendrl_framework"]
 	path = ns_policies/blendrl_framework
 	url = https://github.com/jeeen13/blendrl_framework.git
+[submodule "object_extraction/OC_Atari_framework"]
+	path = object_extraction/OC_Atari_framework
+	url = https://github.com/jeeen13/OC_Atari_framework.git
