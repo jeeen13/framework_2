@@ -4,11 +4,11 @@ from typing import Union
 
 import torch
 
-from BaseRenderer import BaseRenderer
-from ns_policies.blendrl_framework.nudge.agents.logic_agent import NsfrActorCritic
-from ns_policies.blendrl_framework.nudge.agents.neural_agent import ActorCritic
-from ns_policies.blendrl_framework.nudge.env import NudgeBaseEnv
-from ns_policies.blendrl_framework.nudge.utils import load_model, yellow
+from framework_utils.BaseRenderer import BaseRenderer
+from ns_policies.blendrl.nudge.agents.logic_agent import NsfrActorCritic
+from ns_policies.blendrl.nudge.agents.neural_agent import ActorCritic
+from ns_policies.blendrl.nudge.env import NudgeBaseEnv
+from ns_policies.blendrl.nudge.utils import load_model, yellow
 
 
 class BlendRLRenderer(BaseRenderer):
@@ -26,7 +26,7 @@ class BlendRLRenderer(BaseRenderer):
                  seed=0,
                  deterministic=True,
                  env_kwargs: dict = None,):
-        super().__init__(agent_path, env_name, fps, device, screenshot_path, render_panes, seed)
+        super().__init__(agent_path=agent_path, env_name=env_name, fps=fps, device=device, screenshot_path=screenshot_path, render_panes=render_panes, seed=seed)
 
         self.deterministic = deterministic
 
@@ -51,16 +51,21 @@ class BlendRLRenderer(BaseRenderer):
         self.predicates = self.model.logic_actor.prednames
         self._init_pygame(self.current_frame)
 
+        self.overlay = env_kwargs["render_oc_overlay"]
+
     def run(self):
         length = 0
         ret = 0
 
         obs, obs_nn = self.env.reset()
+        obs = obs.to(self.device)
         obs_nn = torch.tensor(obs_nn, device=self.model.device)
 
         while self.running:
             self.reset = False
             self._handle_user_input()
+            self.env.env.render_oc_overlay = self.overlay
+
             if not self.paused:
                 if not self.running:
                     break  # outer game loop
@@ -89,6 +94,7 @@ class BlendRLRenderer(BaseRenderer):
                     new_obs = self.env.reset()
                     self._render()
 
+                new_obs = new_obs.to(self.device)
                 obs = new_obs
                 obs_nn = new_obs_nn
                 length += 1
@@ -106,9 +112,11 @@ class BlendRLRenderer(BaseRenderer):
 
     def _render(self):
         self.window.fill((20, 20, 20))  # clear the entire window
-        self._render_policy_probs()
-        self._render_predicate_probs()
-        self._render_neural_probs()
+        self._render_policy_probs(0)
+        self._render_predicate_probs(0)
+        self._render_neural_probs(0)
+        self._render_semantic_action(21)
+        self._render_selected_action(28)
         self._render_env()
 
         pygame.display.flip()
@@ -139,8 +147,8 @@ class BlendRLRenderer(BaseRenderer):
             text_rect.topleft = (self.env_render_shape[0] + 10, 25 + i * 35)
             self.window.blit(text, text_rect)
 
-    def _render_policy_probs(self):
-        anchor = (self.env_render_shape[0] + 10, 25)
+    def _render_policy_probs(self, offset):
+        anchor = (self.env_render_shape[0] + 10, 25 + offset*35)
 
         model = self.model
         policy_names = ['neural', 'logic']
@@ -160,13 +168,13 @@ class BlendRLRenderer(BaseRenderer):
             text = self.font.render(str(f"{w_i:.3f} - {name}"), True, "white", None)
             text_rect = text.get_rect()
             if i == 0:
-                text_rect.topleft = (self.env_render_shape[0] + 10, 25)
+                text_rect.topleft = (self.env_render_shape[0] + 10, 25 + offset*35)
             else:
-                text_rect.topleft = (self.env_render_shape[0] + 10 + i * 500, 25)
+                text_rect.topleft = (self.env_render_shape[0] + 10 + i * 500, 25 + offset*35)
             self.window.blit(text, text_rect)
 
-    def _render_predicate_probs(self):
-        anchor = (self.env_render_shape[0] + 10, 25)
+    def _render_predicate_probs(self, offset):
+        anchor = (self.env_render_shape[0] + 10, 25 + offset*35)
         nsfr = self.model.actor.logic_actor
         pred_vals = {pred: nsfr.get_predicate_valuation(pred, initial_valuation=False) for pred in nsfr.prednames}
         for i, (pred, val) in enumerate(pred_vals.items()):
@@ -182,11 +190,11 @@ class BlendRLRenderer(BaseRenderer):
 
             text = self.font.render(str(f"{val:.3f} - {pred}"), True, "white", None)
             text_rect = text.get_rect()
-            text_rect.topleft = (self.env_render_shape[0] + 10 + self.panes_col_width / 2, 25 + i * 35)
+            text_rect.topleft = (self.env_render_shape[0] + 10 + self.panes_col_width / 2, 25 + (offset +i) * 35)
             self.window.blit(text, text_rect)
 
-    def _render_neural_probs(self):
-        anchor = (self.env_render_shape[0] + 10, 25)
+    def _render_neural_probs(self, offset):
+        anchor = (self.env_render_shape[0] + 10, 25 + offset*35)
         blender_actor = self.model.actor
         action_vals = blender_actor.neural_action_probs[0].detach().cpu().numpy()
         action_names = ["noop", "fire", "up", "right", "left", "down", "upright", "upleft", "downright", "downleft",
@@ -205,7 +213,7 @@ class BlendRLRenderer(BaseRenderer):
 
             text = self.font.render(str(f"{val:.3f} - {pred}"), True, "white", None)
             text_rect = text.get_rect()
-            text_rect.topleft = (self.env_render_shape[0] + 10, 25 + i * 35)
+            text_rect.topleft = (self.env_render_shape[0] + 10, 25 + (offset +i) * 35)
             self.window.blit(text, text_rect)
 
     def _render_facts(self, th=0.1):

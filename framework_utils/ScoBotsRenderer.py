@@ -13,7 +13,7 @@ from stable_baselines3.common.atari_wrappers import WarpFrame
 from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
 from joblib import load
 
-from utils.BaseRenderer import BaseRenderer
+from framework_utils.BaseRenderer import BaseRenderer
 from ns_policies.SCoBOts_framework.scobi.core import Environment
 from ns_policies.SCoBOts_framework.utils.parser.parser import get_highest_version
 from ns_policies.SCoBOts_framework.viper_extract import DTClassifierModel
@@ -109,6 +109,7 @@ class ScoBotsRenderer(BaseRenderer):
 
         if not self.rgb_agent:
             self.keys2actions = self.env.oc_env.unwrapped.get_keys_to_action()
+            self.action_meanings = self.env.oc_env.unwrapped.get_action_meanings()
 
         self.ram_grid_anchor_left = self.env_render_shape[0] + 28
         self.ram_grid_anchor_top = 28
@@ -159,6 +160,7 @@ class ScoBotsRenderer(BaseRenderer):
         i = 1
         while self.running:
             self._handle_user_input()
+            self.env.oc_env.render_oc_overlay = self.overlay
             if not self.paused:
                 if self.human_playing:
                     action = [self._get_action()]
@@ -207,6 +209,8 @@ class ScoBotsRenderer(BaseRenderer):
 
     def _render(self, frame = None):
         self.window.fill((0,0,0))  # clear the entire window
-        self._render_env(frame)
+        self._render_env()
+        self._render_semantic_action(0)
+        self._render_selected_action(8)
         pygame.display.flip()
         pygame.event.pump()

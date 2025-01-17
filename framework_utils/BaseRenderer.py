@@ -17,7 +17,7 @@ from pathlib import Path
 class BaseRenderer:
     window: pygame.Surface
     clock: pygame.time.Clock
-    zoom: int = 4
+    zoom: int = 1
 
     def __init__(self,
                  agent_path = None,
@@ -25,13 +25,11 @@ class BaseRenderer:
                  fps: int = 15,
                  device = "cpu",
                  screenshot_path = "",
-                 deterministic=True,
                  render_panes=True,
                  seed = 0):
 
         self.fps = fps
         self.seed = seed
-        self.deterministic = deterministic
         self.render_panes = render_panes
         self.panes_col_width = 500 * 2
         self.cell_background_default = np.array([40, 40, 40])
@@ -62,6 +60,7 @@ class BaseRenderer:
         self.paused = False
         self.fast_forward = False
         self.human_playing = False
+        self.overlay = False
         self.reset = False
         self.print_reward = False
         self._recording = False
@@ -69,11 +68,14 @@ class BaseRenderer:
     def _init_pygame(self, sample_image):
         pygame.init()
         pygame.display.set_caption("OCAtari Environment")
-        sample_image = np.repeat(np.repeat(np.swapaxes(sample_image, 0, 1), self.zoom, axis=0), self.zoom, axis=1)
+        if sample_image.shape[0] > sample_image.shape[1]:
+            sample_image = np.repeat(np.repeat(np.swapaxes(sample_image, 0, 1), self.zoom, axis=0), self.zoom, axis=1)
+        print("sample image", sample_image.shape)
         self.env_render_shape = sample_image.shape[:2]
         window_size = list(self.env_render_shape[:2])
         if self.render_panes:
             window_size[0] += self.panes_col_width
+        print("window_size", window_size)
         self.window = pygame.display.set_mode(window_size)
         self.clock = pygame.time.Clock()
         self.font = pygame.font.SysFont('Calibri', 24)
@@ -122,7 +124,8 @@ class BaseRenderer:
                         print("AI playing")
 
                 elif event.key == pygame.K_o:  # 'O': toggle overlay
-                    self.env.env.render_oc_overlay = not self.env.env.render_oc_overlay
+                    self.overlay = not self.overlay
+                    print("overlay:", self.overlay)
 
                 elif event.key == pygame.K_m:  # 'M': save snapshot
                     file_name = f"{datetime.strftime(datetime.now(), '%Y-%m-%d-%H-%M-%S')}.png"
@@ -149,20 +152,21 @@ class BaseRenderer:
 
     def _render_env(self):
         frame = self.current_frame
-        frame = np.swapaxes(np.repeat(np.repeat(frame, self.zoom, axis=0), self.zoom, axis=1), 0, 1)
+        if frame.shape[0] > frame.shape[1]:
+            frame = np.swapaxes(np.repeat(np.repeat(frame, self.zoom, axis=0), self.zoom, axis=1), 0, 1)
         frame_surface = pygame.Surface(self.env_render_shape)
         pygame.pixelcopy.array_to_surface(frame_surface, frame)
         self.window.blit(frame_surface, (0, 0))
         # self.clock.tick(60)
 
-    def _render_selected_action(self):
+    def _render_selected_action(self, offset):
         action_text = f"Raw selected action: {self.action_meanings[self.action[0]]}"
         text = self.font.render(action_text, True, "white", None) # Display the raw selected action.
         text_rect = text.get_rect()
-        text_rect.topleft = (self.env_render_shape[0] + 10, 25 + 7 * 35)  # Place it at the bottom.
+        text_rect.topleft = (self.env_render_shape[0] + 10, 25 + offset * 35)  # Place it at the bottom.
         self.window.blit(text, text_rect)
 
-    def _render_semantic_action(self):
+    def _render_semantic_action(self, offset):
         anchor = (self.env_render_shape[0] + 10, 25)
         action_names = ["NOOP", "FIRE", "LEFT", "RIGHT", "UP", "DOWN"]
         action = action_text = self.action_meanings[self.action[0]]
@@ -171,12 +175,12 @@ class BaseRenderer:
             color = include * self.cell_background_selected + (1 - include) * self.cell_background_default
             pygame.draw.rect(self.window, color, [
                 anchor[0] - 2,
-                anchor[1] - 2 + i * 35,
+                anchor[1] - 2 + (offset + i) * 35,
                 (self.panes_col_width / 3 - 12) * include,
                 28
             ])
 
             text = self.font.render(action_name, True, "white", None)
             text_rect = text.get_rect()
-            text_rect.topleft = (self.env_render_shape[0] + 10, 25+ i*35)  # Place it at the bottom.
+            text_rect.topleft = (self.env_render_shape[0] + 10, 25+ (offset + i) *35)  # Place it at the bottom.
             self.window.blit(text, text_rect)
