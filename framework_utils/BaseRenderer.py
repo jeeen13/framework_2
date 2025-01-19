@@ -17,7 +17,7 @@ from pathlib import Path
 class BaseRenderer:
     window: pygame.Surface
     clock: pygame.time.Clock
-    zoom: int = 1
+    zoom: int = 5
 
     def __init__(self,
                  agent_path = None,
@@ -60,7 +60,7 @@ class BaseRenderer:
         self.paused = False
         self.fast_forward = False
         self.human_playing = False
-        self.overlay = False
+        self.overlay = True
         self.reset = False
         self.print_reward = False
         self._recording = False
@@ -70,15 +70,13 @@ class BaseRenderer:
         pygame.display.set_caption("OCAtari Environment")
         if sample_image.shape[0] > sample_image.shape[1]:
             sample_image = np.repeat(np.repeat(np.swapaxes(sample_image, 0, 1), self.zoom, axis=0), self.zoom, axis=1)
-        print("sample image", sample_image.shape)
         self.env_render_shape = sample_image.shape[:2]
         window_size = list(self.env_render_shape[:2])
         if self.render_panes:
             window_size[0] += self.panes_col_width
-        print("window_size", window_size)
         self.window = pygame.display.set_mode(window_size)
         self.clock = pygame.time.Clock()
-        self.font = pygame.font.SysFont('Calibri', 24)
+        self.font = pygame.font.SysFont('Calibri', 16)
 
 
     def run(self):
@@ -125,7 +123,6 @@ class BaseRenderer:
 
                 elif event.key == pygame.K_o:  # 'O': toggle overlay
                     self.overlay = not self.overlay
-                    print("overlay:", self.overlay)
 
                 elif event.key == pygame.K_m:  # 'M': save snapshot
                     file_name = f"{datetime.strftime(datetime.now(), '%Y-%m-%d-%H-%M-%S')}.png"
@@ -157,30 +154,60 @@ class BaseRenderer:
         frame_surface = pygame.Surface(self.env_render_shape)
         pygame.pixelcopy.array_to_surface(frame_surface, frame)
         self.window.blit(frame_surface, (0, 0))
-        # self.clock.tick(60)
 
     def _render_selected_action(self, offset):
-        action_text = f"Raw selected action: {self.action_meanings[self.action[0]]}"
-        text = self.font.render(action_text, True, "white", None) # Display the raw selected action.
-        text_rect = text.get_rect()
-        text_rect.topleft = (self.env_render_shape[0] + 10, 25 + offset * 35)  # Place it at the bottom.
-        self.window.blit(text, text_rect)
+        row_height = self.font.get_height() + 10
+        action_names = ["noop", "fire", "up", "right", "left", "down", "upright", "upleft", "downright", "downleft", "upfire", "rightfire", "leftfire", "downfire", "uprightfire", "upleftfire", "downrightfire", "downleftfire"]
 
-    def _render_semantic_action(self, offset):
-        anchor = (self.env_render_shape[0] + 10, 25)
-        action_names = ["NOOP", "FIRE", "LEFT", "RIGHT", "UP", "DOWN"]
-        action = action_text = self.action_meanings[self.action[0]]
-        for i, action_name in enumerate(action_names):
-            include = 1 if action_name in action else 0
-            color = include * self.cell_background_selected + (1 - include) * self.cell_background_default
+        title = self.font.render("Raw Selected Action", True, "white", None)
+        title_rect = title.get_rect()
+        title_rect.topleft = (self.env_render_shape[0] + 10, 25 + offset * row_height)
+        self.window.blit(title, title_rect)
+
+        anchor = (self.env_render_shape[0] + 10, 25 + (offset+1) * row_height)
+
+        for i, action in enumerate(action_names):
+            is_selected = 0
+            if action.upper() == self.action_meanings[self.action[0]]:
+                is_selected = 1 # Only the selected action will be highlighted.
+
+            color = is_selected * self.cell_background_highlight + (1 - is_selected) * self.cell_background_default
+            # Render cell background
             pygame.draw.rect(self.window, color, [
                 anchor[0] - 2,
-                anchor[1] - 2 + (offset + i) * 35,
-                (self.panes_col_width / 3 - 12) * include,
-                28
+                anchor[1] - 2 + i * row_height,
+                (self.panes_col_width / 4  - 12) * is_selected,
+                self.font.get_height() + 4
+            ])
+
+            text = self.font.render(action, True, "white", None)
+            text_rect = text.get_rect()
+            text_rect.topleft = (anchor[0], anchor[1] + i * row_height)
+            self.window.blit(text, text_rect)
+
+    def _render_semantic_action(self, offset):
+        row_height = self.font.get_height() + 10
+
+        title = self.font.render("Semantic Actions", True, "white", None)
+        title_rect = title.get_rect()
+        title_rect.topleft = (self.env_render_shape[0] + 10 + self.panes_col_width/2, 25 + offset * row_height)
+        self.window.blit(title, title_rect)
+
+        anchor = (self.env_render_shape[0] + 10 + self.panes_col_width/2, 25 + (offset+1) * row_height)
+
+        action_names = ["noop", "fire", "up", "right", "left", "down"]
+        action = self.action_meanings[self.action[0]].lower()
+        for i, action_name in enumerate(action_names):
+            include = 1 if action_name in action else 0
+            color = include * self.cell_background_highlight + (1 - include) * self.cell_background_default
+            pygame.draw.rect(self.window, color, [
+                anchor[0] - 2,
+                anchor[1] - 2 + i * row_height,
+                (self.panes_col_width / 4 - 12) * include,
+                self.font.get_height() + 4
             ])
 
             text = self.font.render(action_name, True, "white", None)
             text_rect = text.get_rect()
-            text_rect.topleft = (self.env_render_shape[0] + 10, 25+ (offset + i) *35)  # Place it at the bottom.
+            text_rect.topleft = (anchor[0], anchor[1] + i * row_height)  # Place it at the bottom.
             self.window.blit(text, text_rect)

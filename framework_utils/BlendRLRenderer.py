@@ -8,7 +8,7 @@ from framework_utils.BaseRenderer import BaseRenderer
 from ns_policies.blendrl.nudge.agents.logic_agent import NsfrActorCritic
 from ns_policies.blendrl.nudge.agents.neural_agent import ActorCritic
 from ns_policies.blendrl.nudge.env import NudgeBaseEnv
-from ns_policies.blendrl.nudge.utils import load_model, yellow
+from ns_policies.blendrl.nudge.utils import load_model, yellow, get_program_nsfr
 
 
 class BlendRLRenderer(BaseRenderer):
@@ -112,11 +112,13 @@ class BlendRLRenderer(BaseRenderer):
 
     def _render(self):
         self.window.fill((20, 20, 20))  # clear the entire window
+        # self._render_facts(0)
         self._render_policy_probs(0)
-        self._render_predicate_probs(0)
-        self._render_neural_probs(0)
-        self._render_semantic_action(21)
-        self._render_selected_action(28)
+        self._render_predicate_probs(1)
+        self._render_neural_probs(1)
+        # self._render_semantic_action(20)
+        # self._render_selected_action(20)
+        self._render_logic_rules(20)
         self._render_env()
 
         pygame.display.flip()
@@ -124,31 +126,10 @@ class BlendRLRenderer(BaseRenderer):
         if not self.fast_forward:
             self.clock.tick(self.fps)
 
-    def _render_policy_probs_rows(self):
-        anchor = (self.env_render_shape[0] + 10, 25)
-
-        model = self.model
-        policy_names = ['neural', 'logic']
-        weights = model.get_policy_weights()
-        for i, w_i in enumerate(weights):
-            w_i = w_i.item()
-            name = policy_names[i]
-            # Render cell background
-            color = w_i * self.cell_background_highlight_policy + (1 - w_i) * self.cell_background_default
-            pygame.draw.rect(self.window, color, [
-                anchor[0] - 2,
-                anchor[1] - 2 + i * 35,
-                self.panes_col_width - 12,
-                28
-            ])
-
-            text = self.font.render(str(f"{w_i:.3f} - {name}"), True, "white", None)
-            text_rect = text.get_rect()
-            text_rect.topleft = (self.env_render_shape[0] + 10, 25 + i * 35)
-            self.window.blit(text, text_rect)
-
     def _render_policy_probs(self, offset):
-        anchor = (self.env_render_shape[0] + 10, 25 + offset*35)
+        row_height = self.font.get_height() + 10
+
+        anchor = (self.env_render_shape[0] + 10, 25 + offset * row_height)
 
         model = self.model
         policy_names = ['neural', 'logic']
@@ -159,65 +140,72 @@ class BlendRLRenderer(BaseRenderer):
             # Render cell background
             color = w_i * self.cell_background_highlight_policy + (1 - w_i) * self.cell_background_selected
             pygame.draw.rect(self.window, color, [
-                anchor[0] - 2 + i * 500,
+                anchor[0] - 2 + i * self.panes_col_width / 2,
                 anchor[1] - 2,
                 (self.panes_col_width / 2 - 12) * w_i,
-                28
+                self.font.get_height() + 4
             ])
 
             text = self.font.render(str(f"{w_i:.3f} - {name}"), True, "white", None)
             text_rect = text.get_rect()
             if i == 0:
-                text_rect.topleft = (self.env_render_shape[0] + 10, 25 + offset*35)
+                text_rect.topleft = (self.env_render_shape[0] + 10, 25 + offset * row_height)
             else:
-                text_rect.topleft = (self.env_render_shape[0] + 10 + i * 500, 25 + offset*35)
+                text_rect.topleft = (self.env_render_shape[0] + 10 + i * self.panes_col_width / 2, 25 + offset * row_height)
             self.window.blit(text, text_rect)
 
     def _render_predicate_probs(self, offset):
-        anchor = (self.env_render_shape[0] + 10, 25 + offset*35)
+        row_height = self.font.get_height() + 10
+
+        anchor = (self.env_render_shape[0] + 10, 25 + offset * row_height)
+
         nsfr = self.model.actor.logic_actor
         pred_vals = {pred: nsfr.get_predicate_valuation(pred, initial_valuation=False) for pred in nsfr.prednames}
         for i, (pred, val) in enumerate(pred_vals.items()):
-            i += 2
+            # i += 2
             # Render cell background
             color = val * self.cell_background_highlight + (1 - val) * self.cell_background_default
             pygame.draw.rect(self.window, color, [
                 anchor[0] - 2 + self.panes_col_width / 2,
-                anchor[1] - 2 + i * 35,
+                anchor[1] - 2 + i * row_height,
                 (self.panes_col_width / 2 - 12) * val,
-                28
+                self.font.get_height() + 4
             ])
 
             text = self.font.render(str(f"{val:.3f} - {pred}"), True, "white", None)
             text_rect = text.get_rect()
-            text_rect.topleft = (self.env_render_shape[0] + 10 + self.panes_col_width / 2, 25 + (offset +i) * 35)
+            text_rect.topleft = (self.env_render_shape[0] + 10 + self.panes_col_width / 2, 25 + (offset +i) * row_height)
             self.window.blit(text, text_rect)
 
     def _render_neural_probs(self, offset):
-        anchor = (self.env_render_shape[0] + 10, 25 + offset*35)
+        row_height = self.font.get_height() + 10
+
+        anchor = (self.env_render_shape[0] + 10, 25 + offset * row_height)
         blender_actor = self.model.actor
         action_vals = blender_actor.neural_action_probs[0].detach().cpu().numpy()
         action_names = ["noop", "fire", "up", "right", "left", "down", "upright", "upleft", "downright", "downleft",
                         "upfire", "rightfire", "leftfire", "downfire", "uprightfire", "upleftfire", "downrightfire",
                         "downleftfire"]
         for i, (pred, val) in enumerate(zip(action_names, action_vals)):
-            i += 2
+            # i += 2
             # Render cell background
             color = val * self.cell_background_highlight + (1 - val) * self.cell_background_default
             pygame.draw.rect(self.window, color, [
                 anchor[0] - 2,
-                anchor[1] - 2 + i * 35,
+                anchor[1] - 2 + i * row_height,
                 (self.panes_col_width / 2 - 12) * val,
-                28
+                self.font.get_height() + 4
             ])
 
             text = self.font.render(str(f"{val:.3f} - {pred}"), True, "white", None)
             text_rect = text.get_rect()
-            text_rect.topleft = (self.env_render_shape[0] + 10, 25 + (offset +i) * 35)
+            text_rect.topleft = (anchor[0], anchor[1] + i * row_height)
             self.window.blit(text, text_rect)
 
-    def _render_facts(self, th=0.1):
-        anchor = (self.env_render_shape[0] + 10, 25)
+    def _render_facts(self, th=0.1, offset=0):
+        row_height = self.font.get_height() + 10
+
+        anchor = (self.env_render_shape[0] + 10, 25 + offset * row_height)
 
         # nsfr = self.nsfr_reasoner
         nsfr = self.model.actor.logic_actor
@@ -231,18 +219,83 @@ class BlendRLRenderer(BaseRenderer):
                     fact_vals[atom] = v_T[i].item()
 
         for i, (fact, val) in enumerate(fact_vals.items()):
-            i += 2
             # Render cell background
             color = val * self.cell_background_highlight + (1 - val) * self.cell_background_default
             pygame.draw.rect(self.window, color, [
                 anchor[0] - 2,
                 anchor[1] - 2 + i * 35,
                 self.panes_col_width - 12,
-                28
+                self.font.get_height() + 4
             ])
 
             text = self.font.render(str(f"{val:.3f} - {fact}"), True, "white", None)
             text_rect = text.get_rect()
-            text_rect.topleft = (self.env_render_shape[0] + 10, 25 + i * 35)
+            text_rect.topleft = (anchor[0], anchor[1] + i * 35)
+            self.window.blit(text, text_rect)
+
+    def _render_logic_rules(self, offset=0):
+        '''
+        Render logic action rules and highlight the selected rule.
+        '''
+        row_height = self.font.get_height() + 10
+
+        logic_action_rules = get_program_nsfr(self.model.logic_actor)
+
+        title = self.font.render("Logic Action Rules", True, "white", None)
+        title_rect = title.get_rect()
+        title_rect.topleft = (self.env_render_shape[0] + 10, 25 + offset * row_height)
+        self.window.blit(title, title_rect)
+
+        anchor = (self.env_render_shape[0] + 10, 25 + (offset + 1) * row_height)
+
+        predicate_indices = []
+        action_logic_prob = 0
+
+        action = self.action_meanings[self.action].lower()
+        basic_actions = self.model.actor.env.pred2action.keys()
+        action_indices = self.model.actor.env.pred2action
+        action_predicates = self.model.actor.env_action_id_to_action_pred_indices  # Dictionary of actions and its predicates.
+
+        if action in basic_actions:
+            # If selected action is a basic action, then it has predicates that contributed to its probability distribution.
+            predicate_indices = action_predicates[action_indices[action]]
+            action_logic_prob = self.model.actor.logic_action_probs[0].tolist()[
+                action_indices[action]]  # Probability of the selected action given logic probability distribution.
+
+            # Partly taken from to_action_distribution() in blender_agent.py.
+            indices = torch.tensor(action_predicates[action_indices[action]])  # Indices of the predicates of selected action.
+            indices = indices.expand(self.model.actor.batch_size, -1)
+            indices = indices.to(self.model.actor.device)
+            gathered = torch.gather(torch.logit(self.model.actor.raw_action_probs, eps=0.01), 1, indices)
+
+            # Normalized probabilities of the predicates of selected action that they have assigned to it.
+            predicate_probs = torch.softmax(gathered, dim=1).cpu().detach().numpy()[ 0]
+            pred2prob_dict = {}  # Key is index of the predicate and value is the probability that it has assigned to the action.
+            for j in range(len(indices.tolist()[0])):
+                pred2prob_dict[indices.tolist()[0][j]] = predicate_probs[j]
+
+        # Determines how much influence the logic action probabilities have on the overall action probability distribution.
+        logic_policy_weight = self.model.actor.w_policy[1].tolist()
+
+        for i, rule in enumerate(logic_action_rules):
+            is_selected = 0
+            if i in predicate_indices and self.model.actor.actor_mode != "neural" and action_logic_prob * logic_policy_weight > 0.1 and \
+                    pred2prob_dict[i] > 0.1:
+                # Highlight predicates that contributed to the probability of the selected action with their assignment of a probability bigger than 0.1.
+                # Another condition is a large enough weight for the logic policy during its blending with the neural module, as well as logic probability of the action.
+                is_selected = 1
+
+            color = is_selected * self.cell_background_highlight + (1 - is_selected) * self.cell_background_default
+            # Render cell background
+            pygame.draw.rect(self.window, color, [
+                anchor[0] - 2,
+                anchor[1] - 2 + i * row_height,
+                (self.panes_col_width / 1.25 - 12) * is_selected,
+                self.font.get_height() + 4
+            ])
+
+            text = self.font.render(rule, True, "white", None)
+            text_rect = text.get_rect()
+            text_rect.topleft = (anchor[0], anchor[1] + i * row_height)
             self.window.blit(text, text_rect)
 

@@ -29,7 +29,6 @@ class ScoBotsRenderer(BaseRenderer):
     window: pygame.Surface
     clock: pygame.time.Clock
     zoom: int = 4
-    fps: int = 20
 
     def __init__(self,
                  agent_path = None,
@@ -181,8 +180,6 @@ class ScoBotsRenderer(BaseRenderer):
                     self._save_recording()
             self._render()
 
-            if self.rgb_agent:
-                self.clock.tick(self.fps)
         pygame.quit()
 
 
@@ -210,7 +207,10 @@ class ScoBotsRenderer(BaseRenderer):
     def _render(self, frame = None):
         self.window.fill((0,0,0))  # clear the entire window
         self._render_env()
+        self._render_selected_action(0)
         self._render_semantic_action(0)
-        self._render_selected_action(8)
         pygame.display.flip()
         pygame.event.pump()
+
+        if not self.fast_forward:
+            self.clock.tick(self.fps)
