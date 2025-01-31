@@ -26,11 +26,15 @@ class BaseRenderer:
                  device = "cpu",
                  screenshot_path = "",
                  render_panes=True,
+                 lst_panes=None,
                  seed = 0):
 
+        if lst_panes is None:
+            lst_panes = []
         self.fps = fps
         self.seed = seed
         self.render_panes = render_panes
+        self.lst_panes = lst_panes
         self.panes_col_width = 500 * 2
         self.cell_background_default = np.array([40, 40, 40])
         self.cell_background_selected = np.array([80, 80, 80])
@@ -148,6 +152,9 @@ class BaseRenderer:
         raise NotImplementedError
 
     def _render_env(self):
+        """
+        Render environment
+        """
         frame = self.current_frame
         if frame.shape[0] > frame.shape[1]:
             frame = np.swapaxes(np.repeat(np.repeat(frame, self.zoom, axis=0), self.zoom, axis=1), 0, 1)
@@ -155,16 +162,22 @@ class BaseRenderer:
         pygame.pixelcopy.array_to_surface(frame_surface, frame)
         self.window.blit(frame_surface, (0, 0))
 
-    def _render_selected_action(self, offset):
-        row_height = self.font.get_height() + 10
+    def _render_selected_action(self, anchor):
+        """
+        Render selected action pane at anchor point in window
+        """
+        row_height = self._get_row_height()
+        row_cnter = 0
         action_names = ["noop", "fire", "up", "right", "left", "down", "upright", "upleft", "downright", "downleft", "upfire", "rightfire", "leftfire", "downfire", "uprightfire", "upleftfire", "downrightfire", "downleftfire"]
 
+        # Render title
         title = self.font.render("Raw Selected Action", True, "white", None)
         title_rect = title.get_rect()
-        title_rect.topleft = (self.env_render_shape[0] + 10, 25 + offset * row_height)
+        title_rect.topleft = anchor
         self.window.blit(title, title_rect)
+        row_cnter += 1
 
-        anchor = (self.env_render_shape[0] + 10, 25 + (offset+1) * row_height)
+        anchor = (anchor[0], anchor[1] + row_height)
 
         for i, action in enumerate(action_names):
             is_selected = 0
@@ -184,16 +197,24 @@ class BaseRenderer:
             text_rect = text.get_rect()
             text_rect.topleft = (anchor[0], anchor[1] + i * row_height)
             self.window.blit(text, text_rect)
+            row_cnter += 1
+        return (self.panes_col_width / 4, row_height * row_cnter)  # width, height
 
-    def _render_semantic_action(self, offset):
-        row_height = self.font.get_height() + 10
+    def _render_semantic_action(self, anchor):
+        """
+        Render semantic action pane at anchor point in window
+        """
+        row_height = self._get_row_height()
+        row_cnter = 0
 
+        # Render title
         title = self.font.render("Semantic Actions", True, "white", None)
         title_rect = title.get_rect()
-        title_rect.topleft = (self.env_render_shape[0] + 10 + self.panes_col_width/2, 25 + offset * row_height)
+        title_rect.topleft = anchor
         self.window.blit(title, title_rect)
+        row_cnter += 1
 
-        anchor = (self.env_render_shape[0] + 10 + self.panes_col_width/2, 25 + (offset+1) * row_height)
+        anchor = (anchor[0], anchor[1] + row_height)
 
         action_names = ["noop", "fire", "up", "right", "left", "down"]
         action = self.action_meanings[self.action[0]].lower()
@@ -211,3 +232,10 @@ class BaseRenderer:
             text_rect = text.get_rect()
             text_rect.topleft = (anchor[0], anchor[1] + i * row_height)  # Place it at the bottom.
             self.window.blit(text, text_rect)
+            row_cnter += 1
+        return (self.panes_col_width / 4, row_height * row_cnter)  # width, height
+
+    def _get_row_height(self):
+        row_height = self.font.get_height()
+        row_height += row_height / 2
+        return row_height

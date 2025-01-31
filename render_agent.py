@@ -28,10 +28,11 @@ def main():
     device = "cuda:0" if torch.cuda.is_available() else "cpu"
     screenshot_path = ""
     render_panes = True
+    lst_panes = ["policy", "selected_actions", "semantic_actions" ]
     seed = 0
 
     if agent_name == "scobots":
-        renderer = ScoBotsRenderer(agent_path, env_name, fps, device, screenshot_path, render_panes, seed, parser_args)
+        renderer = ScoBotsRenderer(agent_path, env_name, fps, device, screenshot_path, render_panes, lst_panes, seed, parser_args)
     elif agent_name == "blendrl":
         renderer = BlendRLRenderer(agent_path=agent_path,
                                env_name=env_name,
@@ -40,6 +41,7 @@ def main():
                                screenshot_path=screenshot_path,
                                deterministic=deterministic,
                                render_panes=render_panes,
+                                lst_panes=lst_panes,
                                seed=seed,
                                env_kwargs=dict(render_oc_overlay=True))
     else:

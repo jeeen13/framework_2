@@ -1,3 +1,5 @@
+import warnings
+
 import pygame
 
 from typing import Union
@@ -23,16 +25,19 @@ class BlendRLRenderer(BaseRenderer):
                  device = "cpu",
                  screenshot_path = "",
                  render_panes=True,
+                 lst_panes=None,
                  seed=0,
                  deterministic=True,
                  env_kwargs: dict = None,):
-        super().__init__(agent_path=agent_path, env_name=env_name, fps=fps, device=device, screenshot_path=screenshot_path, render_panes=render_panes, seed=seed)
+        super().__init__(agent_path=agent_path, env_name=env_name, fps=fps, device=device, screenshot_path=screenshot_path, render_panes=render_panes, lst_panes=lst_panes, seed=seed)
 
+        if lst_panes is None:
+            lst_panes = []
         self.deterministic = deterministic
 
         # Load model and environment
         self.model = load_model(agent_path, env_kwargs_override=env_kwargs, device=device)
-        self.env = NudgeBaseEnv.from_name(env_name, mode='deictic', seed=self.seed, **env_kwargs)
+        self.env = NudgeBaseEnv.from_name(env_name, mode='blendrl', seed=self.seed, **env_kwargs)
         # self.env = self.model.env
         self.env.reset()
         print(self.model._print())
@@ -79,8 +84,7 @@ class BlendRLRenderer(BaseRenderer):
 
                 (new_obs, new_obs_nn), reward, done, terminations, infos = self.env.step(action,
                                                                                          is_mapped=self.human_playing)
-                # if reward > 0:
-                # print(f"Reward: {reward:.2f}")
+
                 new_obs_nn = torch.tensor(new_obs_nn, device=self.model.device)
                 self.current_frame = self._get_current_frame()
 
@@ -111,25 +115,51 @@ class BlendRLRenderer(BaseRenderer):
         return self.env.env.render()
 
     def _render(self):
-        self.window.fill((20, 20, 20))  # clear the entire window
-        # self._render_facts(0)
-        self._render_policy_probs(0)
-        self._render_predicate_probs(1)
-        self._render_neural_probs(1)
-        # self._render_semantic_action(20)
-        # self._render_selected_action(20)
-        self._render_logic_rules(20)
+        """
+        Render window
+        """
+        lst_possible_panes = ["policy", "selected_actions", "semantic_actions"]
+        self.window.fill((0,0,0))  # clear the entire window
         self._render_env()
+
+        anchor = (self.env_render_shape[0] + 10, 25)
+
+        # render neural and logic policy
+        if "policy" in self.lst_panes:
+            pane_size1 = self._render_policy_probs(anchor)
+            pane_size2 = self._render_neural_probs((anchor[0], anchor[1] + pane_size1[1]))
+            pane_size3 = self._render_predicate_probs((anchor[0]+ pane_size2[0], anchor[1] + pane_size1[1]))
+            anchor = (anchor[0], anchor[1] + 10 + pane_size1[1] + max(pane_size2[1], pane_size3[1]))
+
+        # render selected actions
+        if "selected_actions" in self.lst_panes:
+            pane_size = self._render_selected_action(anchor)
+            if anchor[0] + pane_size[0] >= self.window.get_width():
+                anchor = (self.env_render_shape[0] + 10, anchor[1]+pane_size[1])
+            else:
+                anchor = (anchor[0] + pane_size[0], anchor[1])
+
+        # render semantic actions
+        if "semantic_actions" in self.lst_panes:
+            pane_size = self._render_semantic_action(anchor)
+            if anchor[0] + pane_size[0] >= self.window.get_width():
+                anchor = (self.env_render_shape[0] + 10, anchor[1]+pane_size[1])
+            else:
+                anchor = (anchor[0] + pane_size[0], anchor[1])
+
+        # TODO add logic rule evaluation
+
+        remains = [pane for pane in self.lst_panes if pane not in lst_possible_panes]
+        if remains:
+            warnings.warn(f"No panes available for {remains} in blendRL! Possible panes are: {lst_possible_panes}", UserWarning)
 
         pygame.display.flip()
         pygame.event.pump()
         if not self.fast_forward:
             self.clock.tick(self.fps)
 
-    def _render_policy_probs(self, offset):
-        row_height = self.font.get_height() + 10
-
-        anchor = (self.env_render_shape[0] + 10, 25 + offset * row_height)
+    def _render_policy_probs(self, anchor):
+        row_height = self._get_row_height()
 
         model = self.model
         policy_names = ['neural', 'logic']
@@ -149,24 +179,23 @@ class BlendRLRenderer(BaseRenderer):
             text = self.font.render(str(f"{w_i:.3f} - {name}"), True, "white", None)
             text_rect = text.get_rect()
             if i == 0:
-                text_rect.topleft = (self.env_render_shape[0] + 10, 25 + offset * row_height)
+                text_rect.topleft = anchor
             else:
-                text_rect.topleft = (self.env_render_shape[0] + 10 + i * self.panes_col_width / 2, 25 + offset * row_height)
+                text_rect.topleft = (anchor[0] + self.panes_col_width / 2, anchor[1])
             self.window.blit(text, text_rect)
+        return (self.panes_col_width, row_height)
 
-    def _render_predicate_probs(self, offset):
-        row_height = self.font.get_height() + 10
-
-        anchor = (self.env_render_shape[0] + 10, 25 + offset * row_height)
+    def _render_predicate_probs(self, anchor):
+        row_height = self._get_row_height()
+        row_cnter = 0
 
         nsfr = self.model.actor.logic_actor
         pred_vals = {pred: nsfr.get_predicate_valuation(pred, initial_valuation=False) for pred in nsfr.prednames}
         for i, (pred, val) in enumerate(pred_vals.items()):
-            # i += 2
             # Render cell background
             color = val * self.cell_background_highlight + (1 - val) * self.cell_background_default
             pygame.draw.rect(self.window, color, [
-                anchor[0] - 2 + self.panes_col_width / 2,
+                anchor[0] - 2,
                 anchor[1] - 2 + i * row_height,
                 (self.panes_col_width / 2 - 12) * val,
                 self.font.get_height() + 4
@@ -174,13 +203,16 @@ class BlendRLRenderer(BaseRenderer):
 
             text = self.font.render(str(f"{val:.3f} - {pred}"), True, "white", None)
             text_rect = text.get_rect()
-            text_rect.topleft = (self.env_render_shape[0] + 10 + self.panes_col_width / 2, 25 + (offset +i) * row_height)
+            text_rect.topleft = (anchor[0], anchor[1] + i * row_height)
             self.window.blit(text, text_rect)
+            row_cnter += 1
+        return (self.panes_col_width / 2, row_height * row_cnter)
 
-    def _render_neural_probs(self, offset):
-        row_height = self.font.get_height() + 10
+    def _render_neural_probs(self, anchor):
+        row_height = self.font.get_height()
+        row_height += row_height/2
+        row_cnter = 0
 
-        anchor = (self.env_render_shape[0] + 10, 25 + offset * row_height)
         blender_actor = self.model.actor
         action_vals = blender_actor.neural_action_probs[0].detach().cpu().numpy()
         action_names = ["noop", "fire", "up", "right", "left", "down", "upright", "upleft", "downright", "downleft",
@@ -201,52 +233,26 @@ class BlendRLRenderer(BaseRenderer):
             text_rect = text.get_rect()
             text_rect.topleft = (anchor[0], anchor[1] + i * row_height)
             self.window.blit(text, text_rect)
+            row_cnter += 1
+        return (self.panes_col_width / 2, row_height * row_cnter)
 
-    def _render_facts(self, th=0.1, offset=0):
-        row_height = self.font.get_height() + 10
-
-        anchor = (self.env_render_shape[0] + 10, 25 + offset * row_height)
-
-        # nsfr = self.nsfr_reasoner
-        nsfr = self.model.actor.logic_actor
-
-        fact_vals = {}
-        v_T = nsfr.V_T[0]
-        preds_to_skip = ['.', 'true_predicate', 'test_predicate_global', 'test_predicate_object']
-        for i, atom in enumerate(nsfr.atoms):
-            if v_T[i] > th:
-                if atom.pred.name not in preds_to_skip:
-                    fact_vals[atom] = v_T[i].item()
-
-        for i, (fact, val) in enumerate(fact_vals.items()):
-            # Render cell background
-            color = val * self.cell_background_highlight + (1 - val) * self.cell_background_default
-            pygame.draw.rect(self.window, color, [
-                anchor[0] - 2,
-                anchor[1] - 2 + i * 35,
-                self.panes_col_width - 12,
-                self.font.get_height() + 4
-            ])
-
-            text = self.font.render(str(f"{val:.3f} - {fact}"), True, "white", None)
-            text_rect = text.get_rect()
-            text_rect.topleft = (anchor[0], anchor[1] + i * 35)
-            self.window.blit(text, text_rect)
-
-    def _render_logic_rules(self, offset=0):
-        '''
+    def _render_logic_rules(self, anchor):
+        """
         Render logic action rules and highlight the selected rule.
-        '''
-        row_height = self.font.get_height() + 10
+        """
+        row_height = self.font.get_height()
+        row_height += row_height/2
+        row_cnter = 0
 
         logic_action_rules = get_program_nsfr(self.model.logic_actor)
 
         title = self.font.render("Logic Action Rules", True, "white", None)
         title_rect = title.get_rect()
-        title_rect.topleft = (self.env_render_shape[0] + 10, 25 + offset * row_height)
+        title_rect.topleft = anchor
         self.window.blit(title, title_rect)
+        row_cnter += 1
 
-        anchor = (self.env_render_shape[0] + 10, 25 + (offset + 1) * row_height)
+        anchor = (anchor[0], anchor[1] + row_height)
 
         predicate_indices = []
         action_logic_prob = 0
@@ -290,7 +296,7 @@ class BlendRLRenderer(BaseRenderer):
             pygame.draw.rect(self.window, color, [
                 anchor[0] - 2,
                 anchor[1] - 2 + i * row_height,
-                (self.panes_col_width / 1.25 - 12) * is_selected,
+                (self.panes_col_width / 2 - 12) * is_selected,
                 self.font.get_height() + 4
             ])
 
@@ -298,4 +304,6 @@ class BlendRLRenderer(BaseRenderer):
             text_rect = text.get_rect()
             text_rect.topleft = (anchor[0], anchor[1] + i * row_height)
             self.window.blit(text, text_rect)
+            row_cnter += 1
+        return (self.panes_col_width / 2, row_height * row_cnter)  # width, height
 
