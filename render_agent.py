@@ -2,6 +2,7 @@ import os
 import torch
 import sys
 
+from framework_utils.NeuralAgentRenderer import NeuralAgentRenderer
 
 sys.path.append(os.path.join(os.getcwd(), "ns_policies", "SCoBOts_framework"))
 sys.path.append(os.path.join(os.getcwd(), "ns_policies", "blendrl"))
@@ -43,6 +44,14 @@ def main():
                                 lst_panes=lst_panes,
                                seed=seed,
                                env_kwargs=dict(render_oc_overlay=True))
+    elif agent_name == "neural":
+        NeuralAgentRenderer(agent_path=agent_path,
+                            env_name=env_name,
+                            fps=fps,
+                            device=device,
+                            screenshot_path=screenshot_path,
+                            render_panes=render_panes,
+                            seed=seed)
     else:
         raise NameError(f"Unknown agent {agent_name}")
     renderer.run()
