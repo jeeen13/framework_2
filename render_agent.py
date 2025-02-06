@@ -28,6 +28,7 @@ def main():
     seed = 0
 
     if agent_name == "scobots":
+        agent_path = f"./ns_policies/SCoBOts_framework/resources/checkpoints/{parser_args['exp_name']}/best_model.zip"
         renderer = ScoBotsRenderer(agent_path, env_name, fps, device, screenshot_path, render_panes, lst_panes, seed, parser_args)
 
     elif agent_name == "blendrl":
