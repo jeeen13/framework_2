@@ -1,5 +1,6 @@
 import os
 import time
+import warnings
 
 import numpy as np
 import pygame
@@ -28,7 +29,6 @@ except ImportError as imp_err:
 class ScoBotsRenderer(BaseRenderer):
     window: pygame.Surface
     clock: pygame.time.Clock
-    zoom: int = 4
 
     def __init__(self,
                  agent_path = None,
@@ -37,9 +37,10 @@ class ScoBotsRenderer(BaseRenderer):
                  device = "cpu",
                  screenshot_path = "",
                  render_panes=True,
+                 lst_panes=None,
                  seed = 0,
                  parser_args: dict = None):
-        super().__init__(agent_path, env_name, fps, device, screenshot_path, render_panes, seed)
+        super().__init__(agent_path=agent_path, env_name=env_name, fps=fps, device=device, screenshot_path=screenshot_path, render_panes=render_panes, lst_panes=lst_panes, seed=seed)
 
         version = int(parser_args["version"])
         exp_name = parser_args["exp_name"]
@@ -205,10 +206,34 @@ class ScoBotsRenderer(BaseRenderer):
         self._recording = False
 
     def _render(self, frame = None):
+        """
+        Render window
+        """
+        lst_possible_panes = ["selected_actions", "semantic_actions"]
+
         self.window.fill((0,0,0))  # clear the entire window
         self._render_env()
-        self._render_selected_action(0)
-        self._render_semantic_action(0)
+
+        anchor = (self.env_render_shape[0] + 10, 25)
+
+        if "selected_actions" in self.lst_panes:
+            pane_size = self._render_selected_action(anchor)
+            if anchor[0] + pane_size[0] >= self.window.get_width():
+                anchor = (self.env_render_shape[0] + 10, anchor[1]+pane_size[1])
+            else:
+                anchor = (anchor[0] + pane_size[0], anchor[1])
+
+        if "semantic_actions" in self.lst_panes:
+            pane_size = self._render_semantic_action(anchor)
+            if anchor[0] + pane_size[0] >= self.window.get_width():
+                anchor = (self.env_render_shape[0] + 10, anchor[1]+pane_size[1])
+            else:
+                anchor = (anchor[0] + pane_size[0], anchor[1])
+
+        remains = [pane for pane in self.lst_panes if pane not in lst_possible_panes]
+        if remains:
+            warnings.warn(f"No panes available for {remains} in SCoBots! Possible panes are: {lst_possible_panes}", UserWarning)
+
         pygame.display.flip()
         pygame.event.pump()
 
