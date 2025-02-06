@@ -28,7 +28,6 @@ except ImportError as imp_err:
 class ScoBotsRenderer(BaseRenderer):
     window: pygame.Surface
     clock: pygame.time.Clock
-    zoom: int = 4
 
     def __init__(self,
                  agent_path = None,
