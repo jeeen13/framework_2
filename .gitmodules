@@ -7,3 +7,6 @@
 [submodule "ns_policies/blendrl"]
 	path = ns_policies/blendrl
 	url = https://github.com/NiklasPaprotny/blendrl.git
+[submodule "ns_policies/oc_clean"]
+	path = ns_policies/oc_clean
+	url = https://github.com/anhthi2000/oc_cleanrl.git
