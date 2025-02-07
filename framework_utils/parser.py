@@ -4,8 +4,11 @@ def render_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument("-a", "--agent", type=str, required=True,
                         help="agent to use (e.g. 'scobots')")
+    parser.add_argument("-ap", "--agent_path", type=str, required=True,
+                        help="path to agent")
+    parser.add_argument("-pl", "--panes_list", type=str,
+                        help="list of panes (e.g. policy,selected_actions,semantic_actions")
     parser.add_argument("-f", "--fps", type=int, default=50)
-    parser.add_argument("-rp", "--render_panes", type=bool, help="enables the panes", default=False)
     #########
     parser.add_argument("-g", "--game", type=str, required=True,
                         help="game to train (e.g. 'Pong')")
@@ -62,11 +65,6 @@ def render_parser():
     if opts.agent == "scobots":
         exp_name = opts.game + "_seed" + str(opts.seed) + settings_str
 
-    if opts.agent == "blendrl":
-        # TODO: get the correct path to the agent dynamically
-        exp_name = 'blenrl'
-
-    print(opts.render_panes)
     return {
         "exp_name": exp_name,
         "env_str": env_str,
@@ -84,6 +82,7 @@ def render_parser():
         "viper": opts.viper,
         "hud": opts.hud,
         "agent": opts.agent,
+        "agent_path": opts.agent_path,
+        "lst_panes": opts.panes_list,
         "fps": opts.fps,
-        "render_panes": opts.render_panes,
     }

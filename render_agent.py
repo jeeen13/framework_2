@@ -18,21 +18,22 @@ def main():
     env_name = parser_args["game"]
     agent_name = parser_args["agent"]
     fps = parser_args["fps"]
-    render_panes = parser_args["render_panes"]
     seed = parser_args["seed"]
 
     device = "cuda:0" if torch.cuda.is_available() else "cpu"
     screenshot_path = ""
-    render_panes = True
-    lst_panes = ["policy", "selected_actions", "semantic_actions" ]
-    seed = 0
+    lst_panes = parser_args["lst_panes"]
+    render_panes = lst_panes is not None
+    # blendrl: ./ns_policies/blendrl/out/runs/seaquest_softmax_blender_logic_lr_0.00025_llr_0.00025_blr_0.00025_gamma_0.99_bentcoef_0.01_numenvs_5_steps_128_pretrained_False_joint_True_0"
+    # scobots: ./ns_policies/SCoBOts_framework/resources/checkpoints/Pong_seed0_reward-human_oc_pruned/best_model.zip
+    agent_path = parser_args["agent_path"]
+    if render_panes:
+        lst_panes = lst_panes.split(',')
 
     if agent_name == "scobots":
-        agent_path = f"./ns_policies/SCoBOts_framework/resources/checkpoints/{parser_args['exp_name']}/best_model.zip"
         renderer = ScoBotsRenderer(agent_path, env_name, fps, device, screenshot_path, render_panes, lst_panes, seed, parser_args)
 
     elif agent_name == "blendrl":
-        agent_path = "./ns_policies/blendrl/out/runs/seaquest_softmax_blender_logic_lr_0.00025_llr_0.00025_blr_0.00025_gamma_0.99_bentcoef_0.01_numenvs_5_steps_128_pretrained_False_joint_True_0"
         deterministic = True
         renderer = BlendRLRenderer(agent_path=agent_path,
                                env_name=env_name,
