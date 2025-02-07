@@ -27,8 +27,6 @@ def main():
     # blendrl: ./ns_policies/blendrl/out/runs/seaquest_softmax_blender_logic_lr_0.00025_llr_0.00025_blr_0.00025_gamma_0.99_bentcoef_0.01_numenvs_5_steps_128_pretrained_False_joint_True_0"
     # scobots: ./ns_policies/SCoBOts_framework/resources/checkpoints/Pong_seed0_reward-human_oc_pruned/best_model.zip
     agent_path = parser_args["agent_path"]
-    if render_panes:
-        lst_panes = lst_panes.split(',')
 
     if agent_name == "scobots":
         renderer = ScoBotsRenderer(agent_path, env_name, fps, device, screenshot_path, render_panes, lst_panes, seed, parser_args)

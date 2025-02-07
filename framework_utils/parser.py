@@ -6,8 +6,8 @@ def render_parser():
                         help="agent to use (e.g. 'scobots')")
     parser.add_argument("-ap", "--agent_path", type=str, required=True,
                         help="path to agent")
-    parser.add_argument("-pl", "--panes_list", type=str,
-                        help="list of panes (e.g. policy,selected_actions,semantic_actions")
+    parser.add_argument("-pl", "--panes_list", type=str, nargs="+",
+                        help="list of panes (e.g. -pl policy semantic_actions selected_actions)")
     parser.add_argument("-f", "--fps", type=int, default=50)
     #########
     parser.add_argument("-g", "--game", type=str, required=True,
