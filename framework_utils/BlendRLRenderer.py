@@ -1,3 +1,4 @@
+import time
 import warnings
 
 import pygame
@@ -24,12 +25,20 @@ class BlendRLRenderer(BaseRenderer):
                  fps: int = 15,
                  device = "cpu",
                  screenshot_path = "",
+                 print_rewards=False,
                  render_panes=True,
                  lst_panes=None,
                  seed=0,
                  deterministic=True,
                  env_kwargs: dict = None,):
-        super().__init__(agent_path=agent_path, env_name=env_name, fps=fps, device=device, screenshot_path=screenshot_path, render_panes=render_panes, lst_panes=lst_panes, seed=seed)
+        super().__init__(agent_path=agent_path,
+                         env_name=env_name,
+                         fps=fps, device=device,
+                         screenshot_path=screenshot_path,
+                         print_rewards=print_rewards,
+                         render_panes=render_panes,
+                         lst_panes=lst_panes,
+                         seed=seed)
 
         if lst_panes is None:
             lst_panes = []
@@ -59,8 +68,6 @@ class BlendRLRenderer(BaseRenderer):
         self.overlay = env_kwargs["render_oc_overlay"]
 
     def run(self):
-        length = 0
-        ret = 0
 
         obs, obs_nn = self.env.reset()
         obs = obs.to(self.device)
@@ -77,6 +84,7 @@ class BlendRLRenderer(BaseRenderer):
 
                 if self.human_playing:  # human plays game manually
                     action = self._get_action()
+                    time.sleep(0.05)
                 else:  # AI plays the game
                     action, logprob = self.model.act(obs_nn, obs)  # update the model's internals
                     value = self.model.get_value(obs_nn, obs)
@@ -90,24 +98,16 @@ class BlendRLRenderer(BaseRenderer):
 
                 self._render()
 
-                if self.human_playing and float(reward) != 0:
+                if float(reward) != 0:
                     print(f"Reward {reward:.2f}")
 
                 if self.reset:
-                    done = True
                     new_obs = self.env.reset()
                     self._render()
 
                 new_obs = new_obs.to(self.device)
                 obs = new_obs
                 obs_nn = new_obs_nn
-                length += 1
-
-                if done:
-                    print(f"Return: {ret} - Length {length}")
-                    ret = 0
-                    length = 0
-                    self.env.reset()
 
         pygame.quit()
 

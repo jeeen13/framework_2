@@ -25,6 +25,7 @@ class BaseRenderer:
                  fps: int = 15,
                  device = "cpu",
                  screenshot_path = "",
+                 print_rewards=False,
                  render_panes=True,
                  lst_panes=None,
                  seed = 0):
@@ -35,6 +36,7 @@ class BaseRenderer:
         self.seed = seed
         self.render_panes = render_panes
         self.lst_panes = lst_panes
+        self.print_rewards = print_rewards
         self.panes_col_width = 500 * 2
         self.cell_background_default = np.array([40, 40, 40])
         self.cell_background_selected = np.array([80, 80, 80])
@@ -66,7 +68,6 @@ class BaseRenderer:
         self.human_playing = False
         self.overlay = True
         self.reset = False
-        self.print_reward = False
         self._recording = False
 
     def _init_pygame(self, sample_image):

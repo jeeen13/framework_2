@@ -10,6 +10,8 @@ def render_parser():
                         help="list of panes (e.g. -pl policy semantic_actions selected_actions)")
     parser.add_argument("-f", "--fps", type=int, default=50)
     #########
+    parser.add_argument("-e", "--environment", type=str, required=False, default="ocatari", choices=["ocatari", "hackatari"],
+                        help="environment to load game (e.g. 'ocatari')")
     parser.add_argument("-g", "--game", type=str, required=True,
                         help="game to train (e.g. 'Pong')")
     parser.add_argument("-s", "--seed", type=int, default=0,
@@ -26,7 +28,10 @@ def render_parser():
     parser.add_argument("--print-reward", action="store_true", help="display the reward in the console (if not 0)")
     parser.add_argument("--viper", nargs="?", const=True, default=False, help="evaluate the extracted viper tree instead of a checkpoint")
     parser.add_argument("--hud", action="store_true", help="use HUD objects")
+    parser.add_argument("-fs", "--frameskip", type=int, default=4, help="Frames skipped after each action")
+    parser.add_argument("-dp", "--dopamine_pooling", action='store_true', help="Use dopamine-like frameskipping")
     opts = parser.parse_args()
+
 
     env_str = "ALE/" + opts.game +"-v5"
     settings_str = ""
@@ -73,6 +78,7 @@ def render_parser():
         "variant": variant,
         "version": opts.version or -1,
         "game": opts.game,
+        "environment": opts.environment,
         "seed": opts.seed,
         "reward": opts.reward,
         "rgb": opts.rgb,
@@ -85,4 +91,6 @@ def render_parser():
         "agent_path": opts.agent_path,
         "lst_panes": opts.panes_list,
         "fps": opts.fps,
+        "frameskip": opts.frameskip,
+        "dopamine_pooling": opts.dopamine_pooling,
     }

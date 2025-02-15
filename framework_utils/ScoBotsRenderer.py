@@ -36,11 +36,20 @@ class ScoBotsRenderer(BaseRenderer):
                  fps: int = 15,
                  device = "cpu",
                  screenshot_path = "",
+                 print_rewards=False,
                  render_panes=True,
                  lst_panes=None,
                  seed = 0,
                  parser_args: dict = None):
-        super().__init__(agent_path=agent_path, env_name=env_name, fps=fps, device=device, screenshot_path=screenshot_path, render_panes=render_panes, lst_panes=lst_panes, seed=seed)
+        super().__init__(agent_path=agent_path,
+                         env_name=env_name,
+                         fps=fps,
+                         device=device,
+                         screenshot_path=screenshot_path,
+                         print_rewards=False,
+                         render_panes=render_panes,
+                         lst_panes=lst_panes,
+                         seed=seed)
 
         version = int(parser_args["version"])
         exp_name = parser_args["exp_name"]
