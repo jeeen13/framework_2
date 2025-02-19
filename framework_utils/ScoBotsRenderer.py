@@ -21,32 +21,48 @@ from ns_policies.SCoBOts_framework.viper_extract import DTClassifierModel
 
 try:
     from pygame_screen_record import ScreenRecorder
+
     _screen_recorder_imported = True
 except ImportError as imp_err:
     _screen_recorder_imported = False
 
 
 class ScoBotsRenderer(BaseRenderer):
-    window: pygame.Surface
-    clock: pygame.time.Clock
+    """
+    Renderer class for SCoBots agents, handling visualization, recording, and interaction.
+    """
 
     def __init__(self,
-                 agent_path = None,
-                 env_name = "seaquest",
+                 agent_path=None,
+                 env_name="seaquest",
                  fps: int = 15,
-                 device = "cpu",
-                 screenshot_path = "",
+                 device="cpu",
+                 screenshot_path="",
                  print_rewards=False,
                  render_panes=True,
                  lst_panes=None,
-                 seed = 0,
+                 seed=0,
                  parser_args: dict = None):
+        """
+        Initializes the ScoBotsRenderer with given parameters.
+
+        :param agent_path: Path to the trained agent model.
+        :param env_name: Name of the environment.
+        :param fps: Frames per second.
+        :param device: Computation device (e.g., "cpu" or "cuda", default: "cpu").
+        :param screenshot_path: Path to save screenshots.
+        :param print_rewards: Flag to print rewards during rendering.
+        :param render_panes: Whether to render additional information panes (default: True).
+        :param lst_panes: List of panes to display in the UI (default: None).
+        :param seed: Random seed for environment (default: 0).
+        :param parser_args: Dictionary of parser arguments.
+        """
         super().__init__(agent_path=agent_path,
                          env_name=env_name,
                          fps=fps,
                          device=device,
                          screenshot_path=screenshot_path,
-                         print_rewards=False,
+                         print_rewards=print_rewards,
                          render_panes=render_panes,
                          lst_panes=lst_panes,
                          seed=seed)
@@ -62,7 +78,8 @@ class ScoBotsRenderer(BaseRenderer):
         nb_frames = parser_args["nb_frames"]
         self.print_reward = parser_args["print_reward"]
 
-        # Load model
+        #################################################################################
+        # LOAD POLICY
         if viper:
             print("loading viper tree of " + exp_name)
             if isinstance(viper, str):
@@ -72,7 +89,8 @@ class ScoBotsRenderer(BaseRenderer):
         else:
             self.model = PPO.load(self.agent_path)
 
-        # Load environment
+        ################################################################################
+        # LOAD ENVIRONMENT
         if version == -1:
             version = get_highest_version(exp_name)
         elif version == 0:
@@ -90,11 +108,11 @@ class ScoBotsRenderer(BaseRenderer):
             self.envs = make_vec_env(env_str, seed=self.seed, wrapper_class=WarpFrame)
         else:
             self.envs = Environment(env_str,
-                              focus_dir=self.path,
-                              focus_file=pruned_ff_name,
-                              hide_properties=hide_properties,
-                              draw_features=True,  # implement feature attribution
-                              reward=0)  # env reward only for evaluation
+                                    focus_dir=self.path,
+                                    focus_file=pruned_ff_name,
+                                    hide_properties=hide_properties,
+                                    draw_features=True,  # implement feature attribution
+                                    reward=0)  # env reward only for evaluation
 
             _, _ = self.envs.reset(seed=self.seed)
             dummy_vecenv = DummyVecEnv([lambda: self.envs])
@@ -137,9 +155,13 @@ class ScoBotsRenderer(BaseRenderer):
         else:
             self.nb_frames = np.inf
 
-
-    # Helper function to load from a dt and not a checkpoint directly
     def _load_viper(self, exp_name, path_provided):
+        """
+        Helper function to load from a dt and not a checkpoint directly
+        :param exp_name:  name of the experiment
+        :param path_provided:  Whether the path is provided or not
+        :return: wrapped VIPER model
+        """
         if path_provided:
             viper_path = Path(exp_name)
             model = load(sorted(viper_path.glob("*_best.viper"))[0])
@@ -151,11 +173,14 @@ class ScoBotsRenderer(BaseRenderer):
 
         return wrapped
 
-    # Helper function ensuring that a checkpoint has completed training
     def _ensure_completeness(self, path):
+        """
+        Helper function ensuring that a checkpoint has completed training
+        :param path: path to checkpoint.
+        :return:
+        """
         checkpoint = path / "best_model.zip"
         return checkpoint.is_file()
-
 
     def _get_current_frame(self):
         if self.rgb_agent:
@@ -171,17 +196,21 @@ class ScoBotsRenderer(BaseRenderer):
             self._handle_user_input()
             self.env.oc_env.render_oc_overlay = self.overlay
             if not self.paused:
-                if self.human_playing:
+
+                if self.human_playing:  # human plays game manually
                     action = [self._get_action()]
                     time.sleep(0.05)
-                else:
+                else:  # AI plays game
                     action, _ = self.model.predict(obs, deterministic=True)
                 self.action = action
+
                 obs, rew, done, infos = self.envs.step(action)
                 self.env.sco_obs = obs
                 self.current_frame = self._get_current_frame()
+
                 if self.print_reward and rew[0]:
                     print(rew[0])
+
                 if done:
                     if self._recording and self.nb_frames == 0:
                         self._save_recording()
@@ -192,11 +221,13 @@ class ScoBotsRenderer(BaseRenderer):
 
         pygame.quit()
 
-
     def _save_recording(self):
+        """
+        Save the current frame recording.
+        """
         filename = Path.joinpath(self.path, "recordings")
         filename.mkdir(parents=True, exist_ok=True)
-        self._screen_recorder.stop_rec() # stop recording
+        self._screen_recorder.stop_rec()  # stop recording
         print(self.env.spec.name)
         if self.rgb_agent:
             filename = Path.joinpath(filename, f"{self.env.spec.name}.avi")
@@ -214,34 +245,35 @@ class ScoBotsRenderer(BaseRenderer):
         print(f"Recording saved as {filename}")
         self._recording = False
 
-    def _render(self, frame = None):
-        """
-        Render window
-        """
+    def _render(self, frame=None):
         lst_possible_panes = ["selected_actions", "semantic_actions"]
 
-        self.window.fill((0,0,0))  # clear the entire window
+        self.window.fill((0, 0, 0))  # clear the entire window
         self._render_env()
 
         anchor = (self.env_render_shape[0] + 10, 25)
 
+        # Render selected actions
         if "selected_actions" in self.lst_panes:
             pane_size = self._render_selected_action(anchor)
             if anchor[0] + pane_size[0] >= self.window.get_width():
-                anchor = (self.env_render_shape[0] + 10, anchor[1]+pane_size[1])
+                anchor = (self.env_render_shape[0] + 10, anchor[1] + pane_size[1])
             else:
                 anchor = (anchor[0] + pane_size[0], anchor[1])
 
+        # Render semantic actions
         if "semantic_actions" in self.lst_panes:
             pane_size = self._render_semantic_action(anchor)
             if anchor[0] + pane_size[0] >= self.window.get_width():
-                anchor = (self.env_render_shape[0] + 10, anchor[1]+pane_size[1])
+                anchor = (self.env_render_shape[0] + 10, anchor[1] + pane_size[1])
             else:
                 anchor = (anchor[0] + pane_size[0], anchor[1])
 
+        # Warning for requesting not implemented panes for ScoBots
         remains = [pane for pane in self.lst_panes if pane not in lst_possible_panes]
         if remains:
-            warnings.warn(f"No panes available for {remains} in SCoBots! Possible panes are: {lst_possible_panes}", UserWarning)
+            warnings.warn(f"No panes available for {remains} in SCoBots! Possible panes are: {lst_possible_panes}",
+                          UserWarning)
 
         pygame.display.flip()
         pygame.event.pump()

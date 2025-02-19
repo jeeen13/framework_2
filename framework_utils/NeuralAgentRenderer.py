@@ -14,6 +14,9 @@ sys.path.insert(1, oc_atari_path)
 
 
 class NeuralAgentRenderer(BaseRenderer):
+    """
+    Renderer class for neural agents, handling visualization, recording, and interaction.
+    """
 
     def __init__(self, agent_path=None,
                  env_name="Pong",
@@ -48,7 +51,8 @@ class NeuralAgentRenderer(BaseRenderer):
                          lst_panes=lst_panes,
                          seed=seed)
 
-        # load environment
+        ################################################################################
+        # LOAD ENVIRONMENT
         if parser_args["environment"] == "ocatari":
             from object_extraction.OC_Atari_framework.ocatari.core import OCAtari
             self.env = OCAtari(
@@ -60,6 +64,7 @@ class NeuralAgentRenderer(BaseRenderer):
                 frameskip=parser_args.get("frameskip", 4)
             )
             self.env.metadata['render_fps'] = self.fps
+            self.env.seed(seed)
         elif parser_args["environment"] == "hackatari":
             from object_extraction.HackAtari.hackatari.core import HackAtari
             self.env = HackAtari(
@@ -75,10 +80,13 @@ class NeuralAgentRenderer(BaseRenderer):
             raise Exception("Unknown environment {}".format(parser_args["environment"]))
         self.env.reset()
 
-        # load model
+        #################################################################################
+        # LOAD POLICY
         from object_extraction.OC_Atari_framework.ocatari.utils import load_agent
         _, self.model = load_agent(agent_path, self.env, self.device)
 
+        #################################################################################
+        # RENDERER INITIALIZATION
         self.current_frame = self._get_current_frame()
         self._init_pygame(self.current_frame)
 
@@ -100,7 +108,7 @@ class NeuralAgentRenderer(BaseRenderer):
 
             if not self.paused:
 
-                if self.human_playing:
+                if self.human_playing:  # human plays game manually
                     action = self._get_action()
                     time.sleep(0.05)
                 else:
@@ -128,9 +136,6 @@ class NeuralAgentRenderer(BaseRenderer):
 
 
     def _render(self, frame=None):
-        """
-        Render window
-        """
         lst_possible_panes = ["selected_actions", "semantic_actions"]
 
         self.window.fill((0, 0, 0))  # clear the entire window

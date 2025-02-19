@@ -1,27 +1,32 @@
-import pickle
-from datetime import datetime
-
 import numpy as np
 import pygame
-import gymnasium as gym
-import os
+
+from datetime import datetime
+from abc import abstractmethod, ABC
+
 try:
     from pygame_screen_record import ScreenRecorder
     _screen_recorder_imported = True
 except ImportError as imp_err:
     _screen_recorder_imported = False
 
-from pathlib import Path
 
+class BaseRenderer(ABC):
+    """
+    Base class for rendering an agent interacting with an environment using Pygame.
 
-class BaseRenderer:
+    This class manages rendering, user interaction, and simulation control. It provides
+    methods for handling keyboard inputs, rendering overlays, and displaying panes
+    with information about the agent's actions. The rendering can be adjusted with
+    zoom settings, and additional information panes can be toggled.
+    """
     window: pygame.Surface
     clock: pygame.time.Clock
     zoom: int = 5
 
     def __init__(self,
                  agent_path = None,
-                 env_name = "seaquest",
+                 env_name = "",
                  fps: int = 15,
                  device = "cpu",
                  screenshot_path = "",
@@ -29,13 +34,24 @@ class BaseRenderer:
                  render_panes=True,
                  lst_panes=None,
                  seed = 0):
+        """
+        Initialize the BaseRenderer with the rendering configuration
 
-        if lst_panes is None:
-            lst_panes = []
+        :param agent_path: path to the trained agent
+        :param env_name: Name of the environment to render
+        :param fps: frames per second for rendering
+        :param device: The computation device to use ("cpu" or "gpu", default: "cpu")
+        :param screenshot_path: Directory where screenshots will be saved.
+        :param print_rewards: Whether to print rewards to the console
+        :param render_panes: Whether to render additional information panes (default: True).
+        :param lst_panes: List of panes to display in the UI (default: None)
+        :param seed: Random seed for environment initialization (default: 0).
+        """
+
         self.fps = fps
         self.seed = seed
         self.render_panes = render_panes
-        self.lst_panes = lst_panes
+        self.lst_panes = [] if lst_panes is None else lst_panes
         self.print_rewards = print_rewards
         self.panes_col_width = 500 * 2
         self.cell_background_default = np.array([40, 40, 40])
@@ -71,26 +87,51 @@ class BaseRenderer:
         self._recording = False
 
     def _init_pygame(self, sample_image):
+        """
+        Initialize the Pygame window and rendering settings.
+
+        :param sample_image: A sample frame from the environment to determine the rendering dimensions.
+        """
+
         pygame.init()
-        pygame.display.set_caption("OCAtari Environment")
+        pygame.display.set_caption("Environment")
+
+        # Determine the dimension of the window
         if sample_image.shape[0] > sample_image.shape[1]:
             sample_image = np.repeat(np.repeat(np.swapaxes(sample_image, 0, 1), self.zoom, axis=0), self.zoom, axis=1)
         self.env_render_shape = sample_image.shape[:2]
         window_size = list(self.env_render_shape[:2])
+
+        # Extend the window for additional panes
         if self.render_panes:
             window_size[0] += self.panes_col_width
+
         self.window = pygame.display.set_mode(window_size)
         self.clock = pygame.time.Clock()
         self.font = pygame.font.SysFont('Calibri', 16)
 
-
+    @abstractmethod
     def run(self):
+        """
+        Runs the agent in the environment while handling user input and rendering.
+        :return: None
+        """
         raise NotImplementedError
 
+    @abstractmethod
     def _get_current_frame(self):
+        """
+        Return the current frame from the environment
+        :return: frame
+        """
         raise NotImplementedError
 
     def _get_action(self):
+        """
+        Determines the action to be taken based on the current user input.
+
+        :return: action corresponding to the pressed keys
+        """
         if self.keys2actions is None:
             return 0  # NOOP
         pressed_keys = list(self.current_keys_down)
@@ -102,6 +143,9 @@ class BaseRenderer:
             return 0  # NOOP
 
     def _handle_user_input(self):
+        """
+        Handles user input events from the keyboard and mouse.
+        """
         self.current_mouse_pos = np.asarray(pygame.mouse.get_pos())
 
         events = pygame.event.get()
@@ -149,12 +193,16 @@ class BaseRenderer:
                 if (event.key,) in self.keys2actions.keys():
                     self.current_keys_down.remove(event.key)
 
+    @abstractmethod
     def _render(self):
+        """
+        Renders the environment, overlays and panes onto the Pygame window.
+        """
         raise NotImplementedError
 
     def _render_env(self):
         """
-        Render environment
+        Render environment frame onto the Pygame window.
         """
         frame = self.current_frame
         if frame.shape[0] > frame.shape[1]:
@@ -166,6 +214,9 @@ class BaseRenderer:
     def _render_selected_action(self, anchor):
         """
         Render selected action pane at anchor point in window
+
+        :param anchor: The (x, y) coordinates of the top-left corner in the window where the action pane should be rendered.
+        :return: (width, height) of the rendered pane
         """
         row_height = self._get_row_height()
         row_cnter = 0
@@ -180,6 +231,7 @@ class BaseRenderer:
 
         anchor = (anchor[0], anchor[1] + row_height)
 
+        # Render actions
         for i, action in enumerate(action_names):
             is_selected = 0
             if action.upper() == self.action_meanings[self.action[0]]:
@@ -199,11 +251,16 @@ class BaseRenderer:
             text_rect.topleft = (anchor[0], anchor[1] + i * row_height)
             self.window.blit(text, text_rect)
             row_cnter += 1
-        return (self.panes_col_width / 4, row_height * row_cnter)  # width, height
+
+        return self.panes_col_width / 4, row_height * row_cnter  # width, height
 
     def _render_semantic_action(self, anchor):
         """
         Render semantic action pane at anchor point in window
+
+        :param anchor: The (x, y) coordinates of the top-left corner in the window where the action pane should be rendered.
+
+        :return: (width, height) of the rendered pane
         """
         row_height = self._get_row_height()
         row_cnter = 0
@@ -217,6 +274,7 @@ class BaseRenderer:
 
         anchor = (anchor[0], anchor[1] + row_height)
 
+        # Render actions
         action_names = ["noop", "fire", "up", "right", "left", "down"]
         action = self.action_meanings[self.action[0]].lower()
         for i, action_name in enumerate(action_names):
@@ -234,9 +292,15 @@ class BaseRenderer:
             text_rect.topleft = (anchor[0], anchor[1] + i * row_height)  # Place it at the bottom.
             self.window.blit(text, text_rect)
             row_cnter += 1
-        return (self.panes_col_width / 4, row_height * row_cnter)  # width, height
+
+        return self.panes_col_width / 4, row_height * row_cnter  # width, height
 
     def _get_row_height(self):
+        """
+        Computes and returns the height of a row used for rendering text-based UI elements.
+
+        :return: computed row height
+        """
         row_height = self.font.get_height()
         row_height += row_height / 2
         return row_height
