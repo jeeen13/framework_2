@@ -246,7 +246,7 @@ class ScoBotsRenderer(BaseRenderer):
         self._recording = False
 
     def _render(self, frame=None):
-        lst_possible_panes = ["selected_actions", "semantic_actions"]
+        lst_possible_panes = ["selected_actions", "semantic_actions" "state_usage"]
 
         self.window.fill((0, 0, 0))  # clear the entire window
         self._render_env()
@@ -264,6 +264,14 @@ class ScoBotsRenderer(BaseRenderer):
         # Render semantic actions
         if "semantic_actions" in self.lst_panes:
             pane_size = self._render_semantic_action(anchor)
+            if anchor[0] + pane_size[0] >= self.window.get_width():
+                anchor = (self.env_render_shape[0] + 10, anchor[1] + pane_size[1])
+            else:
+                anchor = (anchor[0] + pane_size[0], anchor[1])
+
+        # render rgb states
+        if "state_usage" in self.lst_panes:
+            pane_size = self.render_state_usage(anchor)
             if anchor[0] + pane_size[0] >= self.window.get_width():
                 anchor = (self.env_render_shape[0] + 10, anchor[1] + pane_size[1])
             else:

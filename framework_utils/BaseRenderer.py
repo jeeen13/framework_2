@@ -3,7 +3,6 @@ import pygame
 
 from datetime import datetime
 from abc import abstractmethod, ABC
-
 try:
     from pygame_screen_record import ScreenRecorder
     _screen_recorder_imported = True
@@ -85,6 +84,7 @@ class BaseRenderer(ABC):
         self.overlay = True
         self.reset = False
         self._recording = False
+        self.blending_weights = None
 
     def _init_pygame(self, sample_image):
         """
@@ -294,6 +294,46 @@ class BaseRenderer(ABC):
             row_cnter += 1
 
         return self.panes_col_width / 4, row_height * row_cnter  # width, height
+
+    def render_state_usage(self, anchor):
+        """
+        Render state usage pane at anchor point in window
+        """
+        row_height = self._get_row_height()
+        col_width = self.panes_col_width / 4
+        outer_width = col_width * 2 + 10
+
+        pygame.draw.rect(self.window, self.cell_background_default, [
+            anchor[0] - 5, anchor[1] - 5, outer_width + 10, row_height * 3 + 10
+        ])
+
+        titles = ["Agent", "Blending weights"]
+        for i, title in enumerate(titles):
+            text = self.font.render(title, True, "white")
+            self.window.blit(text, (anchor[0] + i * col_width, anchor[1]))
+
+        agent = "scobots" if type(self).__name__ == 'ScoBotsRenderer' else "blendrl"
+        blending_weights = ([1.0, 0.0] if agent == "scobots" else
+                            [self.blending_weights.data[0][i].item() for i in range(2)])
+        max_weight_index = blending_weights.index(max(blending_weights))
+
+        agent_values, render_mode_values = ["scobots", "blendrl"], ["rgb", "oc"]
+
+        for i, (agent_name, mode) in enumerate(zip(agent_values, render_mode_values)):
+            y_offset = anchor[1] + row_height * (i + 1)
+
+            for j, (is_selected, text) in enumerate([
+                (agent_name == agent, agent_name),
+                (i == max_weight_index, f"{mode} -> {round(blending_weights[i], 4)}")
+            ]):
+                color = self.cell_background_highlight if is_selected else self.cell_background_default
+                pygame.draw.rect(self.window, color, [
+                    anchor[0] + j * col_width - 2, y_offset - 2, col_width - 6, self.font.get_height() + 4
+                ])
+                rendered_text = self.font.render(text, True, "white")
+                self.window.blit(rendered_text, (anchor[0] + j * col_width, y_offset))
+
+        return outer_width, row_height * 3
 
     def _get_row_height(self):
         """
