@@ -267,17 +267,13 @@ class BaseRenderer:
         agent_values = ["scobots", "blendrl"]
         render_mode_values = ["rgb", "oc"]
 
-        if self.env.mode == "scobots":
+        class_name = type(self).__name__
+        if class_name == 'ScoBotsRenderer':
             agent = "scobots"
-        elif self.env.mode == "blendrl":
-            agent = "blendrl"
-        else:
-            agent = "unknown"
-
-        if self.env.env.render_mode == "rgb_array":
             render_mode = "rgb"
-        if self.env.env.render_mode == "human" and self.env.env.render_oc_overlay:
-            render_mode =  "oc"
+        elif class_name == "BlendRLRenderer":
+            agent = "blendrl"
+            render_mode = "oc" if self.env.env.render_mode == "human" and self.env.env.render_oc_overlay else "rgb"
 
         for i in range(2):
             # agent
