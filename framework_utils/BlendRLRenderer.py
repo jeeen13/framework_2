@@ -1,3 +1,4 @@
+import time
 import warnings
 
 import pygame
@@ -16,9 +17,10 @@ import copy
 
 
 class BlendRLRenderer(BaseRenderer):
+    """
+    Renderer class for BlendRL agents, handling visualization, recording, and interaction.
+    """
     model: Union[NsfrActorCritic, ActorCritic]
-    window: pygame.Surface
-    clock: pygame.time.Clock
 
     def __init__(self,
                  agent_path = None,
@@ -26,26 +28,46 @@ class BlendRLRenderer(BaseRenderer):
                  fps: int = 15,
                  device = "cpu",
                  screenshot_path = "",
+                 print_rewards=False,
                  render_panes=True,
                  lst_panes=None,
                  seed=0,
-                 deterministic=True,
+                 deterministic=False,
                  env_kwargs: dict = None,):
-        super().__init__(agent_path=agent_path, env_name=env_name, fps=fps, device=device, screenshot_path=screenshot_path, render_panes=render_panes, lst_panes=lst_panes, seed=seed)
+        """
+        :param agent_path: path to the trained agent
+        :param env_name: name of the environment
+        :param fps: frames per second
+        :param device: The computation device to use ("cpu" or "gpu", default: "cpu")
+        :param screenshot_path: Directory where screenshots will be saved.
+        :param print_rewards: Whether to print rewards to the console.
+        :param render_panes: Whether to render additional information panes (default: True).
+        :param lst_panes: List of panes to display in the UI (default: None).
+        :param seed: Random seed for environment initialization (default: 0).
+        :param deterministic: Whether to use deterministic policy (default: False).
+        :param env_kwargs: environment keyword arguments (default: None).
+        """
+        super().__init__(agent_path=agent_path,
+                         env_name=env_name,
+                         fps=fps, device=device,
+                         screenshot_path=screenshot_path,
+                         print_rewards=print_rewards,
+                         render_panes=render_panes,
+                         lst_panes=lst_panes,
+                         seed=seed)
 
-        if lst_panes is None:
-            lst_panes = []
-        self.deterministic = deterministic
-
-        # Load model and environment
+        ################################################################################
+        # LOAD MODEL AND ENVIRONMENT
         self.model = load_model(agent_path, env_kwargs_override=env_kwargs, device=device)
         self.env = NudgeBaseEnv.from_name(env_name, mode='blendrl', seed=self.seed, **env_kwargs)
-        # self.env = self.model.env
         self.env.reset()
         print(self.model._print())
+        self.deterministic = deterministic
 
         print(f"Playing '{self.model.env.name}' with {'' if deterministic else 'non-'}deterministic policy.")
 
+        #################################################################################
+        # RENDERER INITIALIZATION
         try:
             self.action_meanings = self.env.env.get_action_meanings()
             self.keys2actions = self.env.env.unwrapped.get_keys_to_action()
@@ -61,8 +83,6 @@ class BlendRLRenderer(BaseRenderer):
         self.overlay = env_kwargs["render_oc_overlay"]
 
     def run(self):
-        length = 0
-        ret = 0
 
         obs, obs_nn = self.env.reset()
         obs = obs.to(self.device)
@@ -79,6 +99,7 @@ class BlendRLRenderer(BaseRenderer):
 
                 if self.human_playing:  # human plays game manually
                     action = self._get_action()
+                    time.sleep(0.05)
                 else:  # AI plays the game
                     action, logprob = self.model.act(obs_nn, obs)  # update the model's internals
                     value = self.model.get_value(obs_nn, obs)
@@ -92,24 +113,16 @@ class BlendRLRenderer(BaseRenderer):
 
                 self._render()
 
-                if self.human_playing and float(reward) != 0:
+                if float(reward) != 0:
                     print(f"Reward {reward:.2f}")
 
                 if self.reset:
-                    done = True
                     new_obs = self.env.reset()
                     self._render()
 
                 new_obs = new_obs.to(self.device)
                 obs = new_obs
                 obs_nn = new_obs_nn
-                length += 1
-
-                if done:
-                    print(f"Return: {ret} - Length {length}")
-                    ret = 0
-                    length = 0
-                    self.env.reset()
 
         pygame.quit()
 
@@ -173,6 +186,12 @@ class BlendRLRenderer(BaseRenderer):
             self.clock.tick(self.fps)
 
     def _render_policy_probs(self, anchor):
+        """
+        Render the policy probabilities as colored bars with text labels.
+
+        :param anchor: The (x, y) coordinates of the top-left corner in the window where the action pane should be rendered.
+        :return: The width and height of the rendered pane
+        """
         row_height = self._get_row_height()
 
         model = self.model
@@ -183,6 +202,7 @@ class BlendRLRenderer(BaseRenderer):
             name = policy_names[i]
             # Render cell background
             color = w_i * self.cell_background_highlight_policy + (1 - w_i) * self.cell_background_selected
+            # Draw rectangle
             pygame.draw.rect(self.window, color, [
                 anchor[0] - 2 + i * self.panes_col_width / 2,
                 anchor[1] - 2,
@@ -190,6 +210,7 @@ class BlendRLRenderer(BaseRenderer):
                 self.font.get_height() + 4
             ])
 
+            # Render policy type
             text = self.font.render(str(f"{w_i:.3f} - {name}"), True, "white", None)
             text_rect = text.get_rect()
             if i == 0:
@@ -200,14 +221,21 @@ class BlendRLRenderer(BaseRenderer):
         return (self.panes_col_width, row_height)
 
     def _render_predicate_probs(self, anchor):
+        """
+        Render the predicate probabilities as colored bars with text labels.
+
+        :param anchor: The (x, y) coordinates of the top-left corner in the window where the action pane should be rendered.
+        :return: The width and height of the rendered pane
+        """
         row_height = self._get_row_height()
         row_cnter = 0
 
         nsfr = self.model.actor.logic_actor
         pred_vals = {pred: nsfr.get_predicate_valuation(pred, initial_valuation=False) for pred in nsfr.prednames}
         for i, (pred, val) in enumerate(pred_vals.items()):
-            # Render cell background
+            # Determine background color based on predicate probability
             color = val * self.cell_background_highlight + (1 - val) * self.cell_background_default
+            # Draw rectangle
             pygame.draw.rect(self.window, color, [
                 anchor[0] - 2,
                 anchor[1] - 2 + i * row_height,
@@ -215,6 +243,7 @@ class BlendRLRenderer(BaseRenderer):
                 self.font.get_height() + 4
             ])
 
+            # Render predicate probability text
             text = self.font.render(str(f"{val:.3f} - {pred}"), True, "white", None)
             text_rect = text.get_rect()
             text_rect.topleft = (anchor[0], anchor[1] + i * row_height)
@@ -223,6 +252,12 @@ class BlendRLRenderer(BaseRenderer):
         return (self.panes_col_width / 2, row_height * row_cnter)
 
     def _render_neural_probs(self, anchor):
+        """
+        Render neural action probabilities as colored bars with text labels.
+
+        :param anchor: The (x, y) coordinates of the top-left corner in the window where the action pane should be rendered.
+        :return: The width and height of the rendered pane
+        """
         row_height = self.font.get_height()
         row_height += row_height/2
         row_cnter = 0
@@ -233,9 +268,9 @@ class BlendRLRenderer(BaseRenderer):
                         "upfire", "rightfire", "leftfire", "downfire", "uprightfire", "upleftfire", "downrightfire",
                         "downleftfire"]
         for i, (pred, val) in enumerate(zip(action_names, action_vals)):
-            # i += 2
             # Render cell background
             color = val * self.cell_background_highlight + (1 - val) * self.cell_background_default
+            # Draw rectangle
             pygame.draw.rect(self.window, color, [
                 anchor[0] - 2,
                 anchor[1] - 2 + i * row_height,
@@ -243,6 +278,7 @@ class BlendRLRenderer(BaseRenderer):
                 self.font.get_height() + 4
             ])
 
+            # Render actions
             text = self.font.render(str(f"{val:.3f} - {pred}"), True, "white", None)
             text_rect = text.get_rect()
             text_rect.topleft = (anchor[0], anchor[1] + i * row_height)
