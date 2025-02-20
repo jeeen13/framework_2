@@ -5,6 +5,7 @@ import numpy as np
 import pygame
 import gymnasium as gym
 import os
+
 try:
     from pygame_screen_record import ScreenRecorder
     _screen_recorder_imported = True
@@ -234,6 +235,84 @@ class BaseRenderer:
             self.window.blit(text, text_rect)
             row_cnter += 1
         return (self.panes_col_width / 4, row_height * row_cnter)  # width, height
+
+    def render_state_usage(self, anchor):
+        """
+        Render state usage pane at anchor point in window
+        """
+        row_height = self._get_row_height()
+        col_width = self.panes_col_width / 4
+        outer_width = col_width * 2 + 10
+        row_cnter = 0
+
+        pygame.draw.rect(self.window, self.cell_background_default, [
+            anchor[0] - 5, anchor[1] - 5, outer_width + 10, row_height * 3 + 10
+        ])
+
+        # Linke Spalte
+        left_title = self.font.render("Agent", True, "white", None)
+        left_title_rect = left_title.get_rect()
+        left_title_rect.topleft = anchor
+        self.window.blit(left_title, left_title_rect)
+
+        right_title = self.font.render("Render Mode", True, "white", None)
+        right_title_rect = right_title.get_rect()
+        right_title_rect.topleft = (anchor[0] + col_width, anchor[1])
+        self.window.blit(right_title, right_title_rect)
+
+        row_cnter += 1
+        anchor = (anchor[0], anchor[1] + row_height)
+
+        # Werte
+        agent_values = ["scobots", "blendrl"]
+        render_mode_values = ["rgb", "oc"]
+
+        if self.env.mode == "scobots":
+            agent = "scobots"
+        elif self.env.mode == "blendrl":
+            agent = "blendrl"
+        else:
+            agent = "unknown"
+
+        if self.env.env.render_mode == "rgb_array":
+            render_mode = "rgb"
+        if self.env.env.render_mode == "human" and self.env.env.render_oc_overlay:
+            render_mode =  "oc"
+
+        for i in range(2):
+            # agent
+            include_left = 1 if agent_values[i] in agent else 0
+            color_left = include_left * self.cell_background_highlight + (
+                        1 - include_left) * self.cell_background_default
+            pygame.draw.rect(self.window, color_left, [
+                anchor[0] - 2,
+                anchor[1] - 2 + i * row_height,
+                col_width - 6,
+                self.font.get_height() + 4
+            ])
+            left_text = self.font.render(agent_values[i], True, "white", None)
+            left_text_rect = left_text.get_rect()
+            left_text_rect.topleft = (anchor[0], anchor[1] + i * row_height)
+            self.window.blit(left_text, left_text_rect)
+
+            # render mode
+            include_right = 1 if render_mode_values[i] in render_mode else 0
+            color_right = include_right * self.cell_background_highlight + (
+                        1 - include_right) * self.cell_background_default
+            pygame.draw.rect(self.window, color_right, [
+                anchor[0] + col_width - 2,
+                anchor[1] - 2 + i * row_height,
+                col_width - 6,
+                self.font.get_height() + 4
+            ])
+            right_text = self.font.render(render_mode_values[i], True, "white", None)
+            right_text_rect = right_text.get_rect()
+            right_text_rect.topleft = (anchor[0] + col_width, anchor[1] + i * row_height)
+            self.window.blit(right_text, right_text_rect)
+
+            row_cnter += 1
+
+        return (outer_width, row_height * row_cnter)
 
     def _get_row_height(self):
         row_height = self.font.get_height()
