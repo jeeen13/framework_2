@@ -82,6 +82,8 @@ class BlendRLRenderer(BaseRenderer):
 
         self.overlay = env_kwargs["render_oc_overlay"]
 
+        self.blending_weights = []
+
     def run(self):
 
         obs, obs_nn = self.env.reset()
@@ -101,8 +103,9 @@ class BlendRLRenderer(BaseRenderer):
                     action = self._get_action()
                     time.sleep(0.05)
                 else:  # AI plays the game
-                    action, logprob = self.model.act(obs_nn, obs)  # update the model's internals
+                    action, logprob, blending_weights_new = self.model.act(obs_nn, obs)  # update the model's internals
                     value = self.model.get_value(obs_nn, obs)
+                    self.blending_weights = blending_weights_new.to(self.device)
                 self.action = action
 
                 (new_obs, new_obs_nn), reward, done, terminations, infos = self.env.step(action,
@@ -133,7 +136,7 @@ class BlendRLRenderer(BaseRenderer):
         """
         Render window
         """
-        lst_possible_panes = ["policy", "selected_actions", "semantic_actions"]
+        lst_possible_panes = ["policy", "selected_actions", "semantic_actions", "state_usage"]
         self.window.fill((0,0,0))  # clear the entire window
         self._render_env()
 
@@ -173,6 +176,14 @@ class BlendRLRenderer(BaseRenderer):
             pane_size = self._render_logic_valuations(anchor)
             if anchor[0] + pane_size[0] >= self.window.get_width():
                 anchor = (self.env_render_shape[0] + 10, anchor[1] + pane_size[1])
+            else:
+                anchor = (anchor[0] + pane_size[0], anchor[1])
+
+        # render state usage
+        if "state_usage" in self.lst_panes:
+            pane_size = self.render_state_usage(anchor)
+            if anchor[0] + pane_size[0] >= self.window.get_width():
+                anchor = (self.env_render_shape[0] + 10, anchor[1] +pane_size[1])
             else:
                 anchor = (anchor[0] + pane_size[0], anchor[1])
 
