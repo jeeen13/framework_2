@@ -27,6 +27,9 @@ def main():
     screenshot_path = ""
     render_panes = lst_panes is not None
 
+    if render_panes and len(lst_panes) == 1 and "heat_map" in lst_panes:
+        render_panes = False
+
     if agent_name == "scobots":
         renderer = ScoBotsRenderer(agent_path=agent_path,
                                env_name=env_name,
