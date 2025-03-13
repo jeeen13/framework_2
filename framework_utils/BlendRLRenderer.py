@@ -112,8 +112,8 @@ class BlendRLRenderer(BaseRenderer):
                     action = self._get_action()
                     time.sleep(0.05)
                 else:  # AI plays the game
-                    action, logprob = self.model.act(obs_nn, obs)  # update the model's internals
-                    action_probs, blending_weights_new = self.model.actor(obs_nn, obs)
+                    action, logprob, blending_weights_new = self.model.act(obs_nn, obs)  # update the model's internals
+                    #action_probs, blending_weights_new = self.model.actor(obs_nn, obs)
                     value = self.model.get_value(obs_nn, obs)
                     self.blending_weights = blending_weights_new.to(self.device)
                 self.action = action
@@ -557,6 +557,9 @@ class BlendRLRenderer(BaseRenderer):
         return (self.panes_col_width / 2, row_height * row_center)  # width, height
 
     def _render_heat_map(self, density=5, radius=5, prefix='default'):
+        '''
+        Render the heatmap on top of the game.
+        '''
         # Render normal game frame.
         if len(self.history['ins']) <= 1:
             self._render_env()
@@ -590,8 +593,10 @@ class BlendRLRenderer(BaseRenderer):
             self.window.blit(heat_surface, (0, 0))
 
     def update_history(self):
+        '''
+        Method for updating the history of the game. Needed for the heatmap.
+        '''
         raw_state, _, _, _, _ = self.env.env.step(self.action) # raw_state has shape (4,84,84), from step() in env.
 
-        # save info!
         self.history['ins'].append(self.env.env._env.og_obs)  # Original rgb observation with shape (210,160,3)
         self.history['obs'].append(raw_state)  # shape (4,84,84), no prepro necessary
