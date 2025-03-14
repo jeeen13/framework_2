@@ -7,7 +7,7 @@ import torch
 
 from framework_utils.BaseRenderer import BaseRenderer
 
-import framework_utils.neural_agent_saliency as saliency
+import object_extraction.OC_Atari_framework.saliency as saliency
 
 # add OC_Atari path
 oc_atari_path = os.path.join(os.getcwd(), "object_extraction/OC_Atari_framework")
@@ -207,7 +207,7 @@ class NeuralAgentRenderer(BaseRenderer):
             frame = self.history['ins'][
                 self.heat_counter].squeeze().copy()  # Get the latest frame with shape (210,160,3)
 
-            frame = saliency.saliency_on_atari_frame(actor_saliency, frame, fudge_factor=500, channel=2)
+            frame = saliency.saliency_on_atari_frame(actor_saliency, frame, fudge_factor=400, channel=2)
             frame = saliency.saliency_on_atari_frame(critic_saliency, frame, fudge_factor=600, channel=0)
 
             frame = frame.swapaxes(0, 1).repeat(upscale_factor, axis=0).repeat(upscale_factor, axis=1)  # frame has shape (210,160,3), upscale to (800,1050,3). From ocatari/core.py/render()
