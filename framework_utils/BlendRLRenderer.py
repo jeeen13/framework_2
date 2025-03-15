@@ -15,6 +15,9 @@ from ns_policies.blendrl.nudge.utils import load_model, yellow, get_program_nsfr
 
 import copy
 
+import ns_policies.blendrl.saliency as saliency
+import numpy as np
+
 
 class BlendRLRenderer(BaseRenderer):
     """
@@ -84,11 +87,15 @@ class BlendRLRenderer(BaseRenderer):
 
         self.blending_weights = []
 
+        self.history = {'ins': [], 'obs': []} # For heat map
+
     def run(self):
 
         obs, obs_nn = self.env.reset()
         obs = obs.to(self.device)
         obs_nn = torch.tensor(obs_nn, device=self.model.device)
+
+        self.heat_counter = -1
 
         while self.running:
             self.reset = False
@@ -104,6 +111,7 @@ class BlendRLRenderer(BaseRenderer):
                     time.sleep(0.05)
                 else:  # AI plays the game
                     action, logprob, blending_weights_new = self.model.act(obs_nn, obs)  # update the model's internals
+                    #action_probs, blending_weights_new = self.model.actor(obs_nn, obs)
                     value = self.model.get_value(obs_nn, obs)
                     self.blending_weights = blending_weights_new.to(self.device)
                 self.action = action
@@ -113,6 +121,10 @@ class BlendRLRenderer(BaseRenderer):
 
                 new_obs_nn = torch.tensor(new_obs_nn, device=self.model.device)
                 self.current_frame = self._get_current_frame()
+
+                self.heat_counter += 1
+
+                self.update_history()
 
                 self._render()
 
@@ -136,10 +148,12 @@ class BlendRLRenderer(BaseRenderer):
         """
         Render window
         """
-        lst_possible_panes = ["policy", "selected_actions", "semantic_actions", "state_usage"]
+        lst_possible_panes = ["policy", "selected_actions", "semantic_actions", "logic_action_rules", "logic_valuations", "state_usage", "heat_map"]
         self.window.fill((0,0,0))  # clear the entire window
-        self._render_env()
-
+        if "heat_map" in self.lst_panes:
+            self._render_heat_map()
+        else:
+            self._render_env()
         anchor = (self.env_render_shape[0] + 10, 25)
 
         # render neural and logic policy
@@ -539,3 +553,48 @@ class BlendRLRenderer(BaseRenderer):
             rule_index += 1
 
         return (self.panes_col_width / 2, row_height * row_center)  # width, height
+
+    def _render_heat_map(self, density=5, radius=5, prefix='default'):
+        '''
+        Render the heatmap on top of the game.
+        '''
+        # Render normal game frame.
+        if len(self.history['ins']) <= 1:
+            self._render_env()
+
+        # Render game frame with heat map.
+        elif len(self.history['ins']) > 1:
+            radius, density = 5, 5
+            upscale_factor = 5
+            actor_saliency = saliency.score_frame(
+                self.env, self.model, self.history, self.heat_counter, radius, density, interp_func=saliency.occlude,
+                mode="actor"
+            )  # shape (84,84)
+
+            critic_saliency = saliency.score_frame(
+                self.env, self.model, self.history, self.heat_counter, radius, density, interp_func=saliency.occlude,
+                mode="critic"
+            )  # shape (84,84)
+
+            frame = self.history['ins'][
+                self.heat_counter].squeeze().copy()  # Get the latest frame with shape (210,160,3)
+
+            frame = saliency.saliency_on_atari_frame(actor_saliency, frame, fudge_factor=400, channel=2)
+            frame = saliency.saliency_on_atari_frame(critic_saliency, frame, fudge_factor=600, channel=0)
+
+            frame = frame.swapaxes(0, 1).repeat(upscale_factor, axis=0).repeat(upscale_factor, axis=1)  # frame has shape (210,160,3), upscale to (800,1050,3). From ocatari/core.py/render()
+
+            heat_surface = pygame.Surface(self.env_render_shape)
+
+            pygame.pixelcopy.array_to_surface(heat_surface, frame)
+
+            self.window.blit(heat_surface, (0, 0))
+
+    def update_history(self):
+        '''
+        Method for updating the history of the game. Needed for the heatmap.
+        '''
+        raw_state, _, _, _, _ = self.env.env.step(self.action) # raw_state has shape (4,84,84), from step() in env.
+
+        self.history['ins'].append(self.env.env._env.og_obs)  # Original rgb observation with shape (210,160,3)
+        self.history['obs'].append(raw_state)  # shape (4,84,84), no prepro necessary

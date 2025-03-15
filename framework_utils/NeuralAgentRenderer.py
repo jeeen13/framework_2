@@ -7,6 +7,7 @@ import torch
 
 from framework_utils.BaseRenderer import BaseRenderer
 
+import object_extraction.OC_Atari_framework.saliency as saliency
 
 # add OC_Atari path
 oc_atari_path = os.path.join(os.getcwd(), "object_extraction/OC_Atari_framework")
@@ -64,7 +65,7 @@ class NeuralAgentRenderer(BaseRenderer):
                 frameskip=parser_args.get("frameskip", 4)
             )
             self.env.metadata['render_fps'] = self.fps
-            self.env.seed(seed)
+            self.env.seed = seed
         elif parser_args["environment"] == "hackatari":
             from object_extraction.HackAtari.hackatari.core import HackAtari
             self.env = HackAtari(
@@ -83,7 +84,7 @@ class NeuralAgentRenderer(BaseRenderer):
         #################################################################################
         # LOAD POLICY
         from object_extraction.OC_Atari_framework.ocatari.utils import load_agent
-        _, self.model = load_agent(agent_path, self.env, self.device)
+        self.model, self.policy = load_agent(agent_path, self.env, self.device)
 
         #################################################################################
         # RENDERER INITIALIZATION
@@ -94,6 +95,7 @@ class NeuralAgentRenderer(BaseRenderer):
         self.action_meanings = self.env.unwrapped.get_action_meanings()
         self.print_reward = print_reward
 
+        self.history = {'ins': [], 'obs': []}  # For heat map
 
     def _get_current_frame(self):
         return self.env.render()
@@ -102,6 +104,7 @@ class NeuralAgentRenderer(BaseRenderer):
     def run(self):
         self.running = True
         obs, _ = self.env.reset()
+        self.heat_counter = -1
         while self.running:
             self._handle_user_input()
             self.env.render_oc_overlay = self.overlay
@@ -114,13 +117,21 @@ class NeuralAgentRenderer(BaseRenderer):
                 else:
                     obs = torch.Tensor(obs)#.to(self.device)
                     obs = obs.unsqueeze(0)
-                    action = self.model(obs)[0]
+                    action = self.policy(obs)[0]
                 if torch.is_tensor(action):
                     self.action = action.unsqueeze(0)
                 else:
                     self.action = [action]
 
                 obs, rew, terminated, truncated, _  = self.env.step(action)
+
+                self.action = action
+
+                self.og_obs = obs
+
+                self.heat_counter += 1
+
+                self.update_history()
 
                 self.current_frame = self._get_current_frame()
 
@@ -136,10 +147,13 @@ class NeuralAgentRenderer(BaseRenderer):
 
 
     def _render(self, frame=None):
-        lst_possible_panes = ["selected_actions", "semantic_actions"]
+        lst_possible_panes = ["selected_actions", "semantic_actions", "heat_map"]
 
         self.window.fill((0, 0, 0))  # clear the entire window
-        self._render_env()
+        if "heat_map" in self.lst_panes:
+            self._render_heat_map()
+        else:
+            self._render_env()
 
         anchor = (self.env_render_shape[0] + 10, 25)
 
@@ -167,3 +181,46 @@ class NeuralAgentRenderer(BaseRenderer):
 
         if not self.fast_forward:
             self.clock.tick(self.fps)
+
+    def _render_heat_map(self, density=5, radius=5, prefix='default'):
+        '''
+        Render the heatmap on top of the game.
+        '''
+        # Render normal game frame.
+        if len(self.history['ins']) <= 1:
+            self._render_env()
+
+        # Render game frame with heat map.
+        elif len(self.history['ins']) > 1:
+            radius, density = 5, 5
+            upscale_factor = 5
+            actor_saliency = saliency.score_frame(
+                self.env, self.model, self.history, self.heat_counter, radius, density, interp_func=saliency.occlude,
+                mode="actor"
+            )  # shape (84,84)
+
+            critic_saliency = saliency.score_frame(
+                self.env, self.model, self.history, self.heat_counter, radius, density, interp_func=saliency.occlude,
+                mode="critic"
+            )  # shape (84,84)
+
+            frame = self.history['ins'][
+                self.heat_counter].squeeze().copy()  # Get the latest frame with shape (210,160,3)
+
+            frame = saliency.saliency_on_atari_frame(actor_saliency, frame, fudge_factor=400, channel=2)
+            frame = saliency.saliency_on_atari_frame(critic_saliency, frame, fudge_factor=600, channel=0)
+
+            frame = frame.swapaxes(0, 1).repeat(upscale_factor, axis=0).repeat(upscale_factor, axis=1)  # frame has shape (210,160,3), upscale to (800,1050,3). From ocatari/core.py/render()
+
+            heat_surface = pygame.Surface(self.env_render_shape)
+
+            pygame.pixelcopy.array_to_surface(heat_surface, frame)
+
+            self.window.blit(heat_surface, (0, 0))
+
+    def update_history(self):
+        '''
+        Method for updating the history of the game. Needed for the heatmap.
+        '''
+        self.history['ins'].append(self.env._env.step(self.action)[0])  # Original rgb observation with shape (210,160,3)
+        self.history['obs'].append(self.og_obs)  # shape (4,84,84), no prepro necessary
