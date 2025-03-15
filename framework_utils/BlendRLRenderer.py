@@ -16,8 +16,6 @@ from ns_policies.blendrl.nudge.utils import load_model, yellow, get_program_nsfr
 import copy
 
 import ns_policies.blendrl.saliency as saliency
-from ocatari.ram.game_objects import ValueObject
-from ocatari.utils import draw_label, draw_arrow
 import numpy as np
 
 
