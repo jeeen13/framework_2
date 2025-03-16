@@ -7,7 +7,7 @@ import torch
 
 from framework_utils.BaseRenderer import BaseRenderer
 
-import object_extraction.OC_Atari_framework.saliency as saliency
+import framework_utils.neural_agent_saliency as saliency
 
 # add OC_Atari path
 oc_atari_path = os.path.join(os.getcwd(), "object_extraction/OC_Atari_framework")
