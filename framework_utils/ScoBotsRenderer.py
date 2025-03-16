@@ -253,29 +253,36 @@ class ScoBotsRenderer(BaseRenderer):
 
         anchor = (self.env_render_shape[0] + 10, 25)
 
+        panes_row = []
+
         # Render selected actions
         if "selected_actions" in self.lst_panes:
             pane_size = self._render_selected_action(anchor)
             if anchor[0] + pane_size[0] >= self.window.get_width():
-                anchor = (self.env_render_shape[0] + 10, anchor[1] + pane_size[1])
+                anchor = (self.env_render_shape[0] + 10, anchor[1] + pane_size[1] + 10)
             else:
                 anchor = (anchor[0] + pane_size[0], anchor[1])
+                panes_row.append(pane_size[1])
 
         # Render semantic actions
         if "semantic_actions" in self.lst_panes:
             pane_size = self._render_semantic_action(anchor)
             if anchor[0] + pane_size[0] >= self.window.get_width():
-                anchor = (self.env_render_shape[0] + 10, anchor[1] + pane_size[1])
+                anchor = (self.env_render_shape[0] + 10, anchor[1] + max(panes_row) + 10)
+                panes_row = []
             else:
                 anchor = (anchor[0] + pane_size[0], anchor[1])
+                panes_row.append(pane_size[1])
 
         # render rgb states
         if "state_usage" in self.lst_panes:
             pane_size = self.render_state_usage(anchor)
             if anchor[0] + pane_size[0] >= self.window.get_width():
-                anchor = (self.env_render_shape[0] + 10, anchor[1] + pane_size[1])
+                anchor = (self.env_render_shape[0] + 10, anchor[1] + max(panes_row) + 10)
+                panes_row = []
             else:
                 anchor = (anchor[0] + pane_size[0], anchor[1])
+                panes_row.append(pane_size[1])
 
         # Warning for requesting not implemented panes for ScoBots
         remains = [pane for pane in self.lst_panes if pane not in lst_possible_panes]

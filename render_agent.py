@@ -9,9 +9,7 @@ sys.path.append(os.path.join(os.getcwd(), "ns_policies", "blendrl"))
 
 a = sys.path
 
-from framework_utils.BlendRLRenderer import BlendRLRenderer
 from framework_utils.parser import render_parser
-from framework_utils.ScoBotsRenderer import ScoBotsRenderer
 
 
 def main():
@@ -31,6 +29,7 @@ def main():
         render_panes = False
 
     if agent_name == "scobots":
+        from framework_utils.ScoBotsRenderer import ScoBotsRenderer
         renderer = ScoBotsRenderer(agent_path=agent_path,
                                env_name=env_name,
                                fps=fps,
@@ -41,6 +40,7 @@ def main():
                                seed=seed,
                                parser_args=parser_args)
     elif agent_name == "blendrl":
+        from framework_utils.BlendRLRenderer import BlendRLRenderer
         deterministic = True
         renderer = BlendRLRenderer(agent_path=agent_path,
                                env_name=env_name,
