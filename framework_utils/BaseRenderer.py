@@ -234,7 +234,7 @@ class BaseRenderer(ABC):
         # Render actions
         for i, action in enumerate(action_names):
             is_selected = 0
-            if action.upper() == self.action_meanings[self.action[0]]:
+            if action.upper() == self.action_meanings[self.action]:
                 is_selected = 1 # Only the selected action will be highlighted.
 
             color = is_selected * self.cell_background_highlight + (1 - is_selected) * self.cell_background_default
@@ -276,7 +276,7 @@ class BaseRenderer(ABC):
 
         # Render actions
         action_names = ["noop", "fire", "up", "right", "left", "down"]
-        action = self.action_meanings[self.action[0]].lower()
+        action = self.action_meanings[self.action].lower()
         for i, action_name in enumerate(action_names):
             include = 1 if action_name in action else 0
             color = include * self.cell_background_highlight + (1 - include) * self.cell_background_default

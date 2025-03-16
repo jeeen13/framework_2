@@ -157,19 +157,24 @@ class NeuralAgentRenderer(BaseRenderer):
 
         anchor = (self.env_render_shape[0] + 10, 25)
 
+        panes_row = []
+
         if "selected_actions" in self.lst_panes:
             pane_size = self._render_selected_action(anchor)
             if anchor[0] + pane_size[0] >= self.window.get_width():
-                anchor = (self.env_render_shape[0] + 10, anchor[1] + pane_size[1])
+                anchor = (self.env_render_shape[0] + 10, anchor[1] + pane_size[1] + 10)
             else:
                 anchor = (anchor[0] + pane_size[0], anchor[1])
+                panes_row.append(pane_size[1])
 
         if "semantic_actions" in self.lst_panes:
             pane_size = self._render_semantic_action(anchor)
             if anchor[0] + pane_size[0] >= self.window.get_width():
-                anchor = (self.env_render_shape[0] + 10, anchor[1] + pane_size[1])
+                anchor = (self.env_render_shape[0] + 10, anchor[1] + max(panes_row) + 10)
+                panes_row = []
             else:
                 anchor = (anchor[0] + pane_size[0], anchor[1])
+                panes_row.append(pane_size[1])
 
         remains = [pane for pane in self.lst_panes if pane not in lst_possible_panes]
         if remains:

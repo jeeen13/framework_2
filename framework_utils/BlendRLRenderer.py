@@ -163,43 +163,53 @@ class BlendRLRenderer(BaseRenderer):
             pane_size3 = self._render_predicate_probs((anchor[0]+ pane_size2[0], anchor[1] + pane_size1[1]))
             anchor = (anchor[0], anchor[1] + 10 + pane_size1[1] + max(pane_size2[1], pane_size3[1]))
 
+        panes_row = []
         # render selected actions
         if "selected_actions" in self.lst_panes:
             pane_size = self._render_selected_action(anchor)
             if anchor[0] + pane_size[0] >= self.window.get_width():
-                anchor = (self.env_render_shape[0] + 10, anchor[1]+pane_size[1])
+                anchor = (self.env_render_shape[0] + 10, anchor[1] + pane_size[1] + 10)
             else:
                 anchor = (anchor[0] + pane_size[0], anchor[1])
+                panes_row.append(pane_size[1])
 
         # render semantic actions
         if "semantic_actions" in self.lst_panes:
             pane_size = self._render_semantic_action(anchor)
             if anchor[0] + pane_size[0] >= self.window.get_width():
-                anchor = (self.env_render_shape[0] + 10, anchor[1]+pane_size[1])
+                anchor = (self.env_render_shape[0] + 10, anchor[1] + max(panes_row) + 10)
+                panes_row = []
             else:
                 anchor = (anchor[0] + pane_size[0], anchor[1])
-
-        if "logic_action_rules" in self.lst_panes:
-            pane_size = self._render_logic_rules(anchor)
-            if anchor[0] + pane_size[0] >= self.window.get_width():
-                anchor = (self.env_render_shape[0] + 10, anchor[1] + pane_size[1])
-            else:
-                anchor = (anchor[0] + pane_size[0], anchor[1])
+                panes_row.append(pane_size[1])
 
         if "logic_valuations" in self.lst_panes:
             pane_size = self._render_logic_valuations(anchor)
             if anchor[0] + pane_size[0] >= self.window.get_width():
-                anchor = (self.env_render_shape[0] + 10, anchor[1] + pane_size[1])
+                anchor = (self.env_render_shape[0] + 10, anchor[1] + max(panes_row) + 10)
+                panes_row = []
             else:
                 anchor = (anchor[0] + pane_size[0], anchor[1])
+                panes_row.append(pane_size[1])
+
+        if "logic_action_rules" in self.lst_panes:
+            pane_size = self._render_logic_rules(anchor)
+            if anchor[0] + pane_size[0] >= self.window.get_width():
+                anchor = (self.env_render_shape[0] + 10, anchor[1] + max(panes_row) + 10)
+                panes_row = []
+            else:
+                anchor = (anchor[0] + pane_size[0], anchor[1])
+                panes_row.append(pane_size[1])
 
         # render state usage
         if "state_usage" in self.lst_panes:
             pane_size = self.render_state_usage(anchor)
             if anchor[0] + pane_size[0] >= self.window.get_width():
-                anchor = (self.env_render_shape[0] + 10, anchor[1] +pane_size[1])
+                anchor = (self.env_render_shape[0] + 10, anchor[1] + max(panes_row) + 10)
+                panes_row = []
             else:
                 anchor = (anchor[0] + pane_size[0], anchor[1])
+                panes_row.append(pane_size[1])
 
         remains = [pane for pane in self.lst_panes if pane not in lst_possible_panes]
         if remains:
@@ -337,7 +347,6 @@ class BlendRLRenderer(BaseRenderer):
             predicate_probs = torch.softmax(gathered, dim=1).cpu().detach().numpy()[0]  # Normalized probabilities of the predicates of selected action that they have assigned to it.
             for j in range(len(indices.tolist()[0])):
                 pred2prob_dict[indices.tolist()[0][j]] = predicate_probs[j]
-            # print(action_predicates[action_indices[action]])
 
         return predicate_indices, action_logic_prob, pred2prob_dict
 
