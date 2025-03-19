@@ -298,7 +298,7 @@ class ScoBotsRenderer(BaseRenderer):
         if remains and not self.pane_warning:
             self.pane_warning = True
             logging.basicConfig(level=logging.WARNING)
-            logging.warning(f"No panes available for {remains} in Insight! Possible panes are: {lst_possible_panes}")
+            logging.warning(f"No panes available for {remains} in SCoBots! Possible panes are: {lst_possible_panes}")
 
         pygame.display.flip()
         pygame.event.pump()
