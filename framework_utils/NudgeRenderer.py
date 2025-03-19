@@ -21,8 +21,7 @@ import numpy as np
 
 sys.path.insert(1,os.path.join(os.getcwd(), "ns_policies", "blendrl"))
 
-
-class BlendRLRenderer(BaseRenderer):
+class NudgeRenderer(BaseRenderer):
     """
     Renderer class for BlendRL agents, handling visualization, recording, and interaction.
     """
@@ -65,7 +64,7 @@ class BlendRLRenderer(BaseRenderer):
         ################################################################################
         # LOAD MODEL AND ENVIRONMENT
         self.model = load_model(agent_path, env_kwargs_override=env_kwargs, device=device)
-        self.env = NudgeBaseEnv.from_name(env_name, mode='blendrl', seed=self.seed, **env_kwargs)
+        self.env = NudgeBaseEnv.from_name(env_name, mode='deictic', **env_kwargs)
         self.env.reset()
         print(self.model._print())
         self.deterministic = deterministic
@@ -90,15 +89,12 @@ class BlendRLRenderer(BaseRenderer):
 
         self.blending_weights = []
 
-        self.history = {'ins': [], 'obs': []} # For heat map
 
     def run(self):
 
         obs, obs_nn = self.env.reset()
         obs = obs.to(self.device)
         obs_nn = torch.tensor(obs_nn, device=self.model.device)
-
-        self.heat_counter = -1
 
         while self.running:
             self.reset = False
@@ -136,10 +132,6 @@ class BlendRLRenderer(BaseRenderer):
                 if self.print_rewards and reward:
                     print(f"reward: {reward}")
 
-                self.heat_counter += 1
-
-                self.update_history()
-
                 self._render()
 
                 if self.reset:
@@ -159,20 +151,15 @@ class BlendRLRenderer(BaseRenderer):
         """
         Render window
         """
-        lst_possible_panes = ["policy", "selected_actions", "semantic_actions", "logic_action_rules", "logic_valuations", "state_usage", "heat_map"]
+        lst_possible_panes = ["policy", "selected_actions", "semantic_actions", "logic_action_rules", "logic_valuations", "state_usage"]
         self.window.fill((0,0,0))  # clear the entire window
-        if "heat_map" in self.lst_panes:
-            self._render_heat_map()
-        else:
-            self._render_env()
+        self._render_env()
         anchor = (self.env_render_shape[0] + 10, 25)
 
         # render neural and logic policy
         if "policy" in self.lst_panes:
-            pane_size1 = self._render_policy_probs(anchor)
-            pane_size2 = self._render_neural_probs((anchor[0], anchor[1] + pane_size1[1]))
-            pane_size3 = self._render_predicate_probs((anchor[0]+ pane_size2[0], anchor[1] + pane_size1[1]))
-            anchor = (anchor[0], anchor[1] + 10 + pane_size1[1] + max(pane_size2[1], pane_size3[1]))
+            pane_size = self._render_predicate_probs(anchor)
+            anchor = (anchor[0], anchor[1] + 10 + pane_size[1])
 
         panes_row = []
         # render selected actions
@@ -226,47 +213,13 @@ class BlendRLRenderer(BaseRenderer):
         if remains and not self.pane_warning:
             self.pane_warning = True
             logging.basicConfig(level=logging.WARNING)
-            logging.warning(f"No panes available for {remains} in BlendRL! Possible panes are: {lst_possible_panes}")
+            logging.warning(f"No panes available for {remains} in NUDGE! Possible panes are: {lst_possible_panes}")
 
         pygame.display.flip()
         pygame.event.pump()
         if not self.fast_forward:
             self.clock.tick(self.fps)
 
-    def _render_policy_probs(self, anchor):
-        """
-        Render the policy probabilities as colored bars with text labels.
-
-        :param anchor: The (x, y) coordinates of the top-left corner in the window where the action pane should be rendered.
-        :return: The width and height of the rendered pane
-        """
-        row_height = self._get_row_height()
-
-        model = self.model
-        policy_names = ['neural', 'logic']
-        weights = model.get_policy_weights()
-        for i, w_i in enumerate(weights):
-            w_i = w_i.item()
-            name = policy_names[i]
-            # Render cell background
-            color = w_i * self.cell_background_highlight_policy + (1 - w_i) * self.cell_background_selected
-            # Draw rectangle
-            pygame.draw.rect(self.window, color, [
-                anchor[0] - 2 + i * self.panes_col_width / 2,
-                anchor[1] - 2,
-                (self.panes_col_width / 2 - 12) * w_i,
-                self.font.get_height() + 4
-            ])
-
-            # Render policy type
-            text = self.font.render(str(f"{w_i:.3f} - {name}"), True, "white", None)
-            text_rect = text.get_rect()
-            if i == 0:
-                text_rect.topleft = anchor
-            else:
-                text_rect.topleft = (anchor[0] + self.panes_col_width / 2, anchor[1])
-            self.window.blit(text, text_rect)
-        return (self.panes_col_width, row_height)
 
     def _render_predicate_probs(self, anchor):
         """
@@ -299,40 +252,6 @@ class BlendRLRenderer(BaseRenderer):
             row_cnter += 1
         return (self.panes_col_width / 2, row_height * row_cnter)
 
-    def _render_neural_probs(self, anchor):
-        """
-        Render neural action probabilities as colored bars with text labels.
-
-        :param anchor: The (x, y) coordinates of the top-left corner in the window where the action pane should be rendered.
-        :return: The width and height of the rendered pane
-        """
-        row_height = self.font.get_height()
-        row_height += row_height/2
-        row_cnter = 0
-
-        blender_actor = self.model.actor
-        action_vals = blender_actor.neural_action_probs[0].detach().cpu().numpy()
-        action_names = ["noop", "fire", "up", "right", "left", "down", "upright", "upleft", "downright", "downleft",
-                        "upfire", "rightfire", "leftfire", "downfire", "uprightfire", "upleftfire", "downrightfire",
-                        "downleftfire"]
-        for i, (pred, val) in enumerate(zip(action_names, action_vals)):
-            # Render cell background
-            color = val * self.cell_background_highlight + (1 - val) * self.cell_background_default
-            # Draw rectangle
-            pygame.draw.rect(self.window, color, [
-                anchor[0] - 2,
-                anchor[1] - 2 + i * row_height,
-                (self.panes_col_width / 2 - 12) * val,
-                self.font.get_height() + 4
-            ])
-
-            # Render actions
-            text = self.font.render(str(f"{val:.3f} - {pred}"), True, "white", None)
-            text_rect = text.get_rect()
-            text_rect.topleft = (anchor[0], anchor[1] + i * row_height)
-            self.window.blit(text, text_rect)
-            row_cnter += 1
-        return (self.panes_col_width / 2, row_height * row_cnter)
 
     def selected_logic_rule(self):
         predicate_indices = []
@@ -347,7 +266,7 @@ class BlendRLRenderer(BaseRenderer):
         if action in basic_actions:
             # If selected action is a basic action, then it has predicates that contributed to its probability distribution.
             predicate_indices = action_predicates[action_indices[action]]
-            action_logic_prob = self.model.actor.logic_action_probs[0].tolist()[
+            action_logic_prob = self.model.actor.raw_action_probs[0].tolist()[
                 action_indices[action]]  # Probability of the selected action given logic probability distribution.
 
             # Partly taken from to_action_distribution() in blender_agent.py.
@@ -611,12 +530,3 @@ class BlendRLRenderer(BaseRenderer):
             pygame.pixelcopy.array_to_surface(heat_surface, frame)
 
             self.window.blit(heat_surface, (0, 0))
-
-    def update_history(self):
-        '''
-        Method for updating the history of the game. Needed for the heatmap.
-        '''
-        raw_state, _, _, _, _ = self.env.env.step(self.action) # raw_state has shape (4,84,84), from step() in env.
-
-        self.history['ins'].append(self.env.env._env.og_obs)  # Original rgb observation with shape (210,160,3)
-        self.history['obs'].append(raw_state)  # shape (4,84,84), no prepro necessary

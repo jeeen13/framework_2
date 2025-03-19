@@ -56,6 +56,20 @@ def main():
                                lst_panes=lst_panes,
                                seed=seed,
                                env_kwargs=dict(render_oc_overlay=True))
+    elif agent_name == "nudge":
+        from framework_utils.BlendRLRenderer import BlendRLRenderer
+        deterministic = True
+        renderer = BlendRLRenderer(agent_path=agent_path,
+                               env_name=env_name,
+                               fps=fps,
+                               device=device,
+                               screenshot_path=screenshot_path,
+                               print_rewards=print_rewards,
+                               deterministic=deterministic,
+                               render_panes=render_panes,
+                               lst_panes=lst_panes,
+                               seed=seed,
+                               env_kwargs=dict(render_oc_overlay=True))
     elif agent_name == "neural":
         renderer = NeuralAgentRenderer(agent_path=agent_path,
                             env_name=env_name,
