@@ -1,20 +1,33 @@
-import logging
+
 import os
-import sys
 import time
-import warnings
+
 import pygame
 import torch
+import sys
+import logging
+
+from stable_baselines3.common.monitor import Monitor
+
+from ns_policies.insight_oc.cleanrl.hackatari_env import HackAtariWrapper
+from ns_policies.insight_oc.cleanrl.hackatari_utils import get_reward_func_path
+
+sys.path.insert(1,os.path.join(os.getcwd(), "ns_policies", "insight_oc", "cleanrl"))
+
 
 from framework_utils.BaseRenderer import BaseRenderer
 
 
-# add OC_Atari path
-oc_atari_path = os.path.join(os.getcwd(), "object_extraction/OC_Atari_framework")
-sys.path.insert(1, oc_atari_path)
+def make_env(env_id, seed, rewardfunc_path, modifs):
+    def thunk():
+        env = HackAtariWrapper(env_id, modifs=modifs, rewardfunc_path=rewardfunc_path)
+        env.seed(seed)
+        env = Monitor(env)
+        return env
 
+    return thunk
 
-class NeuralAgentRenderer(BaseRenderer):
+class InsightRenderer(BaseRenderer):
     """
     Renderer class for neural agents, handling visualization, recording, and interaction.
     """
@@ -28,19 +41,17 @@ class NeuralAgentRenderer(BaseRenderer):
                  render_panes=True,
                  lst_panes=None,
                  seed=0,
-                 parser_args=None,
-                 dopamine_pooling=True):
+                 parser_args=None):
         """
         :param agent_path: file path to the agent weights
         :param env_name: name of the environment
         :param fps: frames per second
         :param device: device to use
         :param screenshot_path: path to save screenshots
-        :param print_reward: whether to print rewards
+        :param print_rewards: whether to print rewards
         :param render_panes: whether to render panes, or not
         :param seed: random seed
         :param parser_args: arguments passed to parser
-        :param dopamine_pooling: whether to use dopamine frame pooling
         """
         super().__init__(agent_path=agent_path,
                          env_name=env_name,
@@ -54,54 +65,40 @@ class NeuralAgentRenderer(BaseRenderer):
 
         ################################################################################
         # LOAD ENVIRONMENT
-        if parser_args["environment"] == "ocatari":
-            from object_extraction.OC_Atari_framework.ocatari.core import OCAtari
-            self.env = OCAtari(
-                env_name=env_name,
-                hud=False,
-                render_mode="rgb_array",
-                obs_mode="dqn",
-                render_oc_overlay=False,
-                frameskip=parser_args.get("frameskip", 4)
-            )
-            self.env.metadata['render_fps'] = self.fps
-            self.env.seed(seed)
-        elif parser_args["environment"] == "hackatari":
-            from object_extraction.HackAtari.hackatari.core import HackAtari
-            self.env = HackAtari(
-                env_name,
-                hud=False,
-                render_mode="rgb_array",
-                obs_mode="dqn",
-                render_oc_overlay=True,
-                dopamine_pooling=dopamine_pooling,
-                frameskip=parser_args.get("frameskip", 1)
-            )
-        else:
-            raise Exception("Unknown environment {}".format(parser_args["environment"]))
+        rewardfunc_path = get_reward_func_path(env_name, parser_args["reward_function"]) if parser_args["reward_function"] else None
+        self.env = HackAtariWrapper(env_name, modifs=parser_args["modifs"], rewardfunc_path=rewardfunc_path)
+        self.env.seed(seed)
+        self.env = Monitor(self.env)
         self.env.reset()
 
         #################################################################################
         # LOAD POLICY
-        from object_extraction.OC_Atari_framework.ocatari.utils import load_agent
-        _, self.model = load_agent(agent_path, self.env, self.device)
+        self.model = torch.load(agent_path, weights_only=False, map_location=device)
+        self.model.network.eval()
+        self.threshold = parser_args["threshold"]
 
         #################################################################################
         # RENDERER INITIALIZATION
         self.current_frame = self._get_current_frame()
         self._init_pygame(self.current_frame)
 
-        self.keys2actions = self.env.unwrapped.get_keys_to_action()
-        self.action_meanings = self.env.unwrapped.get_action_meanings()
+
+        self.keys2actions = self.env.env.unwrapped.get_keys_to_action()
+        self.action_meanings = self.env.env.unwrapped.get_action_meanings()
 
 
     def _get_current_frame(self):
-        return self.env.render()
+        return self.env.env.render()
 
 
     def run(self):
         self.running = True
-        obs, _ = self.env.reset()
+
+        obs = self.env.reset()
+        if isinstance(obs, tuple):  # Handle vectorized envs that return (obs, info)
+            obs = obs[0]
+
+        action_func = lambda t: self.model.get_action_and_value(t, actor="eql")[0]
         while self.running:
             self._handle_user_input()
             self.env.render_oc_overlay = self.overlay
@@ -112,15 +109,11 @@ class NeuralAgentRenderer(BaseRenderer):
                     action = self._get_action()
                     time.sleep(0.05)
                 else:
-                    obs = torch.Tensor(obs)#.to(self.device)
-                    obs = obs.unsqueeze(0)
-                    action = self.model(obs)[0]
-                if torch.is_tensor(action):
-                    self.action = action.unsqueeze(0)
-                else:
-                    self.action = [action]
+                    obs_tensor = torch.Tensor(obs).to(self.device)
+                    action = action_func(obs_tensor.unsqueeze(0))
+                self.action = action
 
-                obs, rew, terminated, truncated, info  = self.env.step(action)
+                obs, rew, terminated, truncated, info  = self.env.step(action.cpu().numpy().item())
 
                 self.current_frame = self._get_current_frame()
 

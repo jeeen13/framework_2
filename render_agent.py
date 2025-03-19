@@ -2,6 +2,7 @@ import os
 import torch
 import sys
 
+from framework_utils.Insight_Renderer import InsightRenderer
 from framework_utils.NeuralAgentRenderer import NeuralAgentRenderer
 
 sys.path.append(os.path.join(os.getcwd(), "ns_policies", "SCoBOts_framework"))
@@ -22,6 +23,7 @@ def main():
     fps = parser_args["fps"]
     lst_panes = parser_args["lst_panes"]
     seed = parser_args["seed"]
+    print_rewards = parser_args["print_reward"]
 
     device = "cuda:0" if torch.cuda.is_available() else "cpu"
     screenshot_path = ""
@@ -33,6 +35,7 @@ def main():
                                fps=fps,
                                device=device,
                                screenshot_path=screenshot_path,
+                               print_rewards=print_rewards,
                                render_panes=render_panes,
                                lst_panes=lst_panes,
                                seed=seed,
@@ -44,6 +47,7 @@ def main():
                                fps=fps,
                                device=device,
                                screenshot_path=screenshot_path,
+                               print_rewards=print_rewards,
                                deterministic=deterministic,
                                render_panes=render_panes,
                                lst_panes=lst_panes,
@@ -55,11 +59,23 @@ def main():
                             fps=fps,
                             device=device,
                             screenshot_path=screenshot_path,
+                            print_rewards=print_rewards,
                             render_panes=render_panes,
                             lst_panes=lst_panes,
                             seed=seed,
                             parser_args=parser_args,
                             dopamine_pooling=parser_args["dopamine_pooling"],)
+    elif agent_name == "insight":
+        renderer = InsightRenderer(agent_path=agent_path,
+                                   env_name=env_name,
+                                   fps = fps,
+                                   device = device,
+                                   screenshot_path=screenshot_path,
+                                   print_rewards=print_rewards,
+                                   render_panes=render_panes,
+                                   lst_panes=lst_panes,
+                                   parser_args=parser_args,
+        )
     else:
         raise NameError(f"Unknown agent {agent_name}")
     renderer.run()

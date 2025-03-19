@@ -52,6 +52,7 @@ class BaseRenderer(ABC):
         self.seed = seed
         self.render_panes = render_panes
         self.lst_panes = [] if lst_panes is None else lst_panes
+        self.pane_warning = False
         self.print_rewards = print_rewards
         self.panes_col_width = 500 * 2
         self.cell_background_default = np.array([40, 40, 40])

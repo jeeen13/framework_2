@@ -1,3 +1,4 @@
+import logging
 import os
 import time
 import warnings
@@ -76,7 +77,7 @@ class ScoBotsRenderer(BaseRenderer):
         viper = parser_args["viper"]
         self.record = parser_args["record"]
         nb_frames = parser_args["nb_frames"]
-        self.print_reward = parser_args["print_reward"]
+        self.print_rewards = parser_args["print_reward"]
 
         #################################################################################
         # LOAD POLICY
@@ -208,8 +209,16 @@ class ScoBotsRenderer(BaseRenderer):
                 self.env.sco_obs = obs
                 self.current_frame = self._get_current_frame()
 
-                if self.print_reward and rew[0]:
-                    print(rew[0])
+                if done or self.reset:
+                    if "episode" in infos and self.print_rewards:
+                        episode_return = infos["episode"]["r"]
+                        episode_length = infos["episode"]["l"]
+                        print("episodic return:", episode_return)
+                        print("episodic length:", episode_length)
+                    obs= self.env.reset()
+
+                if self.print_rewards and rew:
+                    print(f"reward: {rew[0]}")
 
                 if done:
                     if self._recording and self.nb_frames == 0:
@@ -271,9 +280,10 @@ class ScoBotsRenderer(BaseRenderer):
 
         # Warning for requesting not implemented panes for ScoBots
         remains = [pane for pane in self.lst_panes if pane not in lst_possible_panes]
-        if remains:
-            warnings.warn(f"No panes available for {remains} in SCoBots! Possible panes are: {lst_possible_panes}",
-                          UserWarning)
+        if remains and not self.pane_warning:
+            self.pane_warning = True
+            logging.basicConfig(level=logging.WARNING)
+            logging.warning(f"No panes available for {remains} in Insight! Possible panes are: {lst_possible_panes}")
 
         pygame.display.flip()
         pygame.event.pump()
