@@ -1,3 +1,4 @@
+import logging
 import time
 import warnings
 
@@ -116,20 +117,28 @@ class BlendRLRenderer(BaseRenderer):
                     self.blending_weights = blending_weights_new.to(self.device)
                 self.action = action
 
-                (new_obs, new_obs_nn), reward, done, terminations, infos = self.env.step(action,
+                (new_obs, new_obs_nn), reward, done, terminations, info = self.env.step(action,
                                                                                          is_mapped=self.human_playing)
 
                 new_obs_nn = torch.tensor(new_obs_nn, device=self.model.device)
                 self.current_frame = self._get_current_frame()
+
+                if done or terminations or self.reset:
+                    if "episode" in info and self.print_rewards:
+                        episode_return = info["episode"]["r"]
+                        episode_length = info["episode"]["l"]
+                        print("episodic return:", episode_return)
+                        print("episodic length:", episode_length)
+                    obs, _ = self.env.reset()
+
+                if self.print_rewards and reward:
+                    print(f"reward: {reward}")
 
                 self.heat_counter += 1
 
                 self.update_history()
 
                 self._render()
-
-                if float(reward) != 0:
-                    print(f"Reward {reward:.2f}")
 
                 if self.reset:
                     new_obs = self.env.reset()
@@ -212,8 +221,10 @@ class BlendRLRenderer(BaseRenderer):
                 panes_row.append(pane_size[1])
 
         remains = [pane for pane in self.lst_panes if pane not in lst_possible_panes]
-        if remains:
-            warnings.warn(f"No panes available for {remains} in blendRL! Possible panes are: {lst_possible_panes}", UserWarning)
+        if remains and not self.pane_warning:
+            self.pane_warning = True
+            logging.basicConfig(level=logging.WARNING)
+            logging.warning(f"No panes available for {remains} in Insight! Possible panes are: {lst_possible_panes}")
 
         pygame.display.flip()
         pygame.event.pump()
