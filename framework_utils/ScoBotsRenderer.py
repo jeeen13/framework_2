@@ -202,7 +202,7 @@ class ScoBotsRenderer(BaseRenderer):
                     time.sleep(0.05)
                 else:  # AI plays game
                     action, _ = self.model.predict(obs, deterministic=True)
-                self.action = action
+                self.action = action[0]
 
                 obs, rew, done, infos = self.envs.step(action)
                 self.env.sco_obs = obs
