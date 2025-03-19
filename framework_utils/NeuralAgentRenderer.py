@@ -1,3 +1,4 @@
+import logging
 import os
 import sys
 import time
@@ -24,7 +25,7 @@ class NeuralAgentRenderer(BaseRenderer):
                  fps: int = 15,
                  device="cpu",
                  screenshot_path="",
-                 print_reward=False,
+                 print_rewards=False,
                  render_panes=True,
                  lst_panes=None,
                  seed=0,
@@ -47,7 +48,7 @@ class NeuralAgentRenderer(BaseRenderer):
                          fps=fps,
                          device=device,
                          screenshot_path=screenshot_path,
-                         print_rewards=print_reward,
+                         print_rewards=print_rewards,
                          render_panes=render_panes,
                          lst_panes=lst_panes,
                          seed=seed)
@@ -93,7 +94,6 @@ class NeuralAgentRenderer(BaseRenderer):
 
         self.keys2actions = self.env.unwrapped.get_keys_to_action()
         self.action_meanings = self.env.unwrapped.get_action_meanings()
-        self.print_reward = print_reward
 
         self.history = {'ins': [], 'obs': []}  # For heat map
 
@@ -123,7 +123,7 @@ class NeuralAgentRenderer(BaseRenderer):
                 else:
                     self.action = [action]
 
-                obs, rew, terminated, truncated, _  = self.env.step(action)
+                obs, rew, terminated, truncated, info  = self.env.step(action)
 
                 self.action = action
 
@@ -136,9 +136,14 @@ class NeuralAgentRenderer(BaseRenderer):
                 self.current_frame = self._get_current_frame()
 
                 if terminated or truncated or self.reset:
+                    if "episode" in info and self.print_rewards:
+                        episode_return = info["episode"]["r"]
+                        episode_length = info["episode"]["l"]
+                        print("episodic return:", episode_return)
+                        print("episodic length:", episode_length)
                     obs, _ = self.env.reset()
 
-                if self.print_reward and rew:
+                if self.print_rewards and rew:
                     print(f"reward: {rew}")
 
             self._render()
@@ -177,9 +182,10 @@ class NeuralAgentRenderer(BaseRenderer):
                 panes_row.append(pane_size[1])
 
         remains = [pane for pane in self.lst_panes if pane not in lst_possible_panes]
-        if remains:
-            warnings.warn(f"No panes available for {remains} in SCoBots! Possible panes are: {lst_possible_panes}",
-                          UserWarning)
+        if remains and not self.pane_warning:
+            self.pane_warning = True
+            logging.basicConfig(level=logging.WARNING)
+            logging.warning(f"No panes available for {remains} in neural agents! Possible panes are: {lst_possible_panes}")
 
         pygame.display.flip()
         pygame.event.pump()

@@ -10,3 +10,6 @@
 [submodule "object_extraction/HackAtari"]
 	path = object_extraction/HackAtari
 	url = https://github.com/k4ntz/HackAtari.git
+[submodule "ns_policies/insight_oc"]
+	path = ns_policies/insight_oc
+	url = https://github.com/maxschin/insight.git
