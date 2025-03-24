@@ -127,11 +127,13 @@ class NeuralAgentRenderer(BaseRenderer):
 
                 self.action = action
 
-                self.og_obs = obs
+                if "heat_map" in self.lst_panes:
 
-                self.heat_counter += 1
+                    self.og_obs = obs
 
-                self.update_history()
+                    self.heat_counter += 1
+
+                    self.update_history()
 
                 self.current_frame = self._get_current_frame()
 
@@ -233,5 +235,5 @@ class NeuralAgentRenderer(BaseRenderer):
         '''
         Method for updating the history of the game. Needed for the heatmap.
         '''
-        self.history['ins'].append(self.env._env.step(self.action)[0])  # Original rgb observation with shape (210,160,3)
+        self.history['ins'].append(self.env._env.render())  # Original rgb observation with shape (210,160,3)
         self.history['obs'].append(self.og_obs)  # shape (4,84,84), no prepro necessary
