@@ -553,7 +553,7 @@ class BlendRLRenderer(BaseRenderer):
                     pygame.draw.rect(self.window, color, [
                         anchor[0] - 2,
                         anchor[1] - 2 + index * row_height,
-                        (self.panes_col_width / 2 - 12) * atom[1],
+                        (self.panes_col_width / 4 - 12) * atom[1],
                         self.font.get_height() + 4
                     ])
 
@@ -574,7 +574,7 @@ class BlendRLRenderer(BaseRenderer):
             row_center += 1
             rule_index += 1
 
-        return (self.panes_col_width / 2, row_height * row_center)  # width, height
+        return (self.panes_col_width / 4, row_height * row_center)  # width, height
 
     def _render_heat_map(self, density=5, radius=5, prefix='default'):
         '''

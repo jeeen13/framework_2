@@ -255,7 +255,7 @@ class ScoBotsRenderer(BaseRenderer):
         self._recording = False
 
     def _render(self, frame=None):
-        lst_possible_panes = ["selected_actions", "semantic_actions" "state_usage"]
+        lst_possible_panes = ["selected_actions", "semantic_actions", "state_usage"]
 
         self.window.fill((0, 0, 0))  # clear the entire window
         self._render_env()
