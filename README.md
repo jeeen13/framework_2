@@ -6,7 +6,7 @@
 ``` git submodule update --init ```
 4. Checkout either master or main for all submodules
    1. ``` ns_policies/blendrl ``` main
-   2. ``` ns_policies/SCoBOts_framework ``` main
+   2. ``` ns_policies/SCoBOts_framework ``` master
    3. ``` ns_policies/insight_oc ``` main
    4. ``` object_extraction/HackAtari ``` master
    5. ``` object_extraction/OC_Atari_framework ``` master
