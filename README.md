@@ -30,7 +30,7 @@ Install the other dependencies:
 ```
    pip install torch==2.5.1 torchvision==0.20.1 -f https://download.pytorch.org/whl/torch_stable.html
    pip install torch_geometric
-   pip install torch-scatter -f https://data.pyg.org/whl/torch-1.12+cpu.html
+   pip install torch-scatter -f https://data.pyg.org/whl/torch-2.5.1+cpu.html
    pip install vidmaker 
    pip install "gymnasium[atari, accept-rom-license]"
    ```
