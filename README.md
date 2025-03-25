@@ -28,9 +28,9 @@ pip install -r requirements.txt && pip install "stable-baselines3[extras]==2.0.0
     ```
 Install the other dependencies:
 ```
-   pip install torch==2.5.1 torchvision==0.13.0 -f https://download.pytorch.org/whl/torch_stable.html
+   pip install torch==1.12 torchvision==0.13.0 -f https://download.pytorch.org/whl/torch_stable.html
    pip install torch_geometric
-   pip install torch-scatter -f https://data.pyg.org/whl/torch-2.5.1+cpu.html
+   pip install torch-scatter -f https://data.pyg.org/whl/torch-1.12+cpu.html
    pip install vidmaker 
    pip install "gymnasium[atari, accept-rom-license]"
    ```
