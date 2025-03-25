@@ -135,10 +135,10 @@ class BlendRLRenderer(BaseRenderer):
 
                 if self.print_rewards and reward:
                     print(f"reward: {reward}")
-
-                self.heat_counter += 1
-
-                self.update_history()
+                    
+                if "heat_map" in self.lst_panes:
+                    self.heat_counter += 1
+                    self.update_history()
 
                 self._render()
 
@@ -390,7 +390,7 @@ class BlendRLRenderer(BaseRenderer):
             is_selected = 0
             if i in predicate_indices and self.model.actor.actor_mode != "neural" and action_logic_prob * logic_policy_weight > 0.1 and \
                     pred2prob_dict[i] > 0.1:
-                # Highlight predicates that contributed to the probability of the selected action with their assignment of a probability bigger than 0.1.
+                # Highlight predicates that contributed to the probability of the selected action with their assignment of a normalized probability bigger than 0.1.
                 # Another condition is a large enough weight for the logic policy during its blending with the neural module, as well as logic probability of the action.
                 is_selected = 1
 
@@ -544,7 +544,7 @@ class BlendRLRenderer(BaseRenderer):
 
             if rule_index in predicate_indices and self.model.actor.blender_mode != "neural" and action_logic_prob * logic_policy_weight > 0.1 and \
                     pred2prob_dict[rule_index] > 0.1:
-                # Only highlight truth values of atoms from logic action rules that participated in the selection of the action with their assignment of a probability bigger than 0.1.
+                # Only highlight truth values of atoms from logic action rules that participated in the selection of the action with their assignment of a normalized probability bigger than 0.1.
                 # Another condition is a large enough weight for the logic policy during its blending with the neural module, as well as logic probability of the action.
                 for atom in atoms:
                     index += 1
@@ -616,7 +616,6 @@ class BlendRLRenderer(BaseRenderer):
         '''
         Method for updating the history of the game. Needed for the heatmap.
         '''
-        raw_state, _, _, _, _ = self.env.env.step(self.action) # raw_state has shape (4,84,84), from step() in env.
-
-        self.history['ins'].append(self.env.env._env.og_obs)  # Original rgb observation with shape (210,160,3)
-        self.history['obs'].append(raw_state)  # shape (4,84,84), no prepro necessary
+        rgb_obs = self.env.env._env.render() # Original rgb observation with shape (210,160,3)
+        self.history['ins'].append(rgb_obs)
+        self.history['obs'].append(self.env.env._env.observation(rgb_obs)) # shape (4,84,84), no prepro necessary
