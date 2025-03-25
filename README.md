@@ -68,7 +68,7 @@ python render_agent.py -a METHOD -g GAME -pl PANES_LIST -ap AGENT_PATH
 * ```GAME``` is the type of game you want to play (e.g. Pong, seaquest)
 * ```PANES_LIST``` list of panes that will be displayed next to the game (e.g. selected_actions, policy)
 * ```AGENT_PATH``` path to your local agent
-
+  
 ## Examples
 SCoBOts agent downloaded from above playing pong: 
 ``` 
@@ -77,4 +77,8 @@ python render_agent.py -a scobots -g Pong -pl selected_actions -ap ./ns_policies
 blendrl agent downloaded from above playing kangaroo: 
 ``` 
 python render_agent.py -a blendrl -ap ./ns_policies/blendrl/models/kangaroo_demo -g kangaroo
+```
+Insight example
+```
+python render_agent.py -a insight -g Pong -pl selected_actions semantic_actions -ap AGENT_PATH --print-reward
 ```
