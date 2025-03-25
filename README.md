@@ -50,6 +50,14 @@ wget https://hessenbox.tu-darmstadt.de/dl/fiPLH36Zwi8EVv8JaLU4HpE2/resources_all
 unzip resources_all.zip
 ```
 
+### blendrl agents
+
+```
+wget https://hessenbox.tu-darmstadt.de/dl/fiCNznPuWkALH8JaCJWHeeAV/models.zip
+unzip models.zip
+rm models.zip
+```
+
 ## Run the game using an agent
 
 ```
