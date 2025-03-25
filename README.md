@@ -5,11 +5,11 @@
 3. cd into the Repository and init all submodules
 ``` git submodule update --init ```
 4. Checkout either master or main for all submodules
-   1. ``` ns_policies/blendrl ```
-   2. ``` ns_policies/SCoBOts_framework ```
-   3. ``` ns_policies/insight_oc ```
-   4. ``` object_extraction/HackAtari ```
-   5. ``` object_extraction/OC_Atari_framework ```
+   1. ``` ns_policies/blendrl ``` main
+   2. ``` ns_policies/SCoBOts_framework ``` master
+   3. ``` ns_policies/insight_oc ``` main
+   4. ``` object_extraction/HackAtari ``` master
+   5. ``` object_extraction/OC_Atari_framework ``` master
 ## Setup
 ```
 pip install -r requirements.txt && pip install "stable-baselines3[extras]==2.0.0"
@@ -51,7 +51,7 @@ unzip resources_all.zip
 ```
 
 ### blendrl agents
-
+Inside ``` ns_policies/blendrl ``` run the following commands to get pretrained scobots agents:
 ```
 wget https://hessenbox.tu-darmstadt.de/dl/fiCNznPuWkALH8JaCJWHeeAV/models.zip
 unzip models.zip
@@ -73,4 +73,8 @@ python render_agent.py -a METHOD -g GAME -pl PANES_LIST -ap AGENT_PATH
 SCoBOts agent downloaded from above playing pong: 
 ``` 
 python render_agent.py -a scobots -g Pong -pl selected_actions -ap ./ns_policies/SCoBOts_framework/resources/checkpoints/Pong_seed0_reward-human_oc_pruned/best_model.zip
+```
+blendrl agent downloaded from above playing kangaroo: 
+``` 
+python render_agent.py -a blendrl -ap ./ns_policies/blendrl/models/kangaroo_demo -g kangaroo
 ```
