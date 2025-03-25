@@ -1,5 +1,15 @@
 # Framework
-
+## Prerequisites
+1. Use Python 3.10
+2. Clone the Repository
+3. cd into the Repository and init all submodules
+``` git submodule --init ```
+4. Checkout either master or main for all submodules
+   1. ``` ns_policies/blendrl ```
+   2. ``` ns_policies/SCoBOts_framework ```
+   3. ``` ns_policies/insight_oc ```
+   4. ``` object_extraction/HackAtari ```
+   5. ``` object_extraction/OC_Atari_framework ```
 ## Setup
 ```
 pip install -r requirements.txt && pip install "stable-baselines3[extras]==2.0.0"
