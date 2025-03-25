@@ -3,7 +3,7 @@
 1. Use Python 3.10
 2. Clone the Repository
 3. cd into the Repository and init all submodules
-``` git submodule --init ```
+``` git submodule update --init ```
 4. Checkout either master or main for all submodules
    1. ``` ns_policies/blendrl ```
    2. ``` ns_policies/SCoBOts_framework ```
