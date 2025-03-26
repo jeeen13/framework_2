@@ -2,8 +2,6 @@ import os
 import torch
 import sys
 
-from framework_utils.Insight_Renderer import InsightRenderer
-from framework_utils.NeuralAgentRenderer import NeuralAgentRenderer
 
 sys.path.append(os.path.join(os.getcwd(), "ns_policies", "SCoBOts_framework"))
 sys.path.append(os.path.join(os.getcwd(), "ns_policies", "blendrl"))
@@ -71,6 +69,7 @@ def main():
                                seed=seed,
                                env_kwargs=dict(render_oc_overlay=True))
     elif agent_name == "neural":
+        from framework_utils.NeuralAgentRenderer import NeuralAgentRenderer
         renderer = NeuralAgentRenderer(agent_path=agent_path,
                             env_name=env_name,
                             fps=fps,
@@ -83,6 +82,7 @@ def main():
                             parser_args=parser_args,
                             dopamine_pooling=parser_args["dopamine_pooling"],)
     elif agent_name == "insight":
+        from framework_utils.Insight_Renderer import InsightRenderer
         renderer = InsightRenderer(agent_path=agent_path,
                                    env_name=env_name,
                                    fps = fps,

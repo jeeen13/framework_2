@@ -70,10 +70,12 @@ wget https://hessenbox.tu-darmstadt.de/dl/fiXx4TFMfQZAzhfbffgdm8cz/Pong_AgentSim
 Download deep RL agents from [Google Drive](https://drive.google.com/drive/folders/1-6l2A82dGlBZ52jlKEuo9vTCdOcfFZHJ?usp=sharing) and save them inside ``` ns_policies/neural/agents/<GAME> ```.
 
 ### NUDGE agents
-Download nudge agents from the blendrl github branches for nudge [Example link](https://github.com/ml-research/blendrl/tree/Kangaroo-Nudge/out_kangaroo/runs/kangaroo_softmax_blender_logic_lr_0.00025_llr_0.00025_blr_0.00025_gamma_0.99_bentcoef_0.01_numenvs_50_steps_128__0)
+Download nudge agents from the blendrl github branches for nudge [Example link](https://github.com/ml-research/blendrl/tree/Freeway/out_freeway/runs/freeway_softmax_blender_logic_lr_0.00025_llr_0.00025_blr_0.00025_gamma_0.99_bentcoef_0.01_numenvs_50_steps_128__0)
 and save them inside ``` ns_policies/blendrl/out/ ```.
 
-**Note**: For NUDGE agents to work, exchange the ``` ns_policies/blendrl/in/envs/<GAME> ``` folder for the <GAME> folder used in the branch implementation
+**Note**: For NUDGE agents to work, exchange the ``` ns_policies/blendrl/in/envs/<GAME> ``` folder for the <GAME> folder used in the branch implementation and change the wrappers 
+``gym.wrappers.Autoreset, gym.wrappers.GrayscaleObservation, gym.wrappers.FrameStackObservation`` for the corresponding wrappers in gym v0.28.1 
+``gym.wrappers.AutoResetWrapper, gym.wrappers.GrayScaleObservation, gym.wrappers.FrameStack `` in ``env.py`` and ``env_vectorized.py``.
 
 ## Run the game using an agent
 
