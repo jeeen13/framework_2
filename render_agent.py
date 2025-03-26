@@ -15,9 +15,9 @@ from framework_utils.parser import render_parser
 
 def main():
     parser_args = render_parser()
-    agent_name = parser_args["agent"]
+    agent_name = parser_args["agent"].lower()
     agent_path = parser_args["agent_path"]
-    env_name = parser_args["game"]
+    env_name = parser_args["game"].capitalize()
     fps = parser_args["fps"]
     lst_panes = parser_args["lst_panes"]
     seed = parser_args["seed"]

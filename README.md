@@ -36,7 +36,7 @@ Install the other dependencies:
    ```
    
 ### SCoBOts agents
-Inside ``` ns_policies/SCoBOts_framework ``` run the following commands to get pretrained scobots agents:
+Inside ``` ns_policies/SCoBOts_framework ``` run the following commands to get pretrained SCoBOts agents:
 
 ```
 # Download the agents (only seed0)
@@ -50,13 +50,30 @@ wget https://hessenbox.tu-darmstadt.de/dl/fiPLH36Zwi8EVv8JaLU4HpE2/resources_all
 unzip resources_all.zip
 ```
 
-### blendrl agents
-Inside ``` ns_policies/blendrl ``` run the following commands to get pretrained scobots agents:
+### BlendRL agents
+Inside ``` ns_policies/blendrl ``` run the following commands to get pretrained BlendRL agents:
 ```
 wget https://hessenbox.tu-darmstadt.de/dl/fiCNznPuWkALH8JaCJWHeeAV/models.zip
 unzip models.zip
 rm models.zip
 ```
+
+### INSIGHT agents
+Inside ``` ns_policies/insight_oc ``` run the following commands to get a dummy INSIGHT agent:
+```
+mkdir models
+cd models
+wget https://hessenbox.tu-darmstadt.de/dl/fiXx4TFMfQZAzhfbffgdm8cz/Pong_AgentSimplified_final.pth
+```
+
+### Neural agents
+Download deep RL agents from [Google Drive](https://drive.google.com/drive/folders/1-6l2A82dGlBZ52jlKEuo9vTCdOcfFZHJ?usp=sharing) and save them inside ``` ns_policies/neural/agents/<GAME> ```.
+
+### NUDGE agents
+Download nudge agents from the blendrl github branches for nudge [Example link](https://github.com/ml-research/blendrl/tree/Kangaroo-Nudge/out_kangaroo/runs/kangaroo_softmax_blender_logic_lr_0.00025_llr_0.00025_blr_0.00025_gamma_0.99_bentcoef_0.01_numenvs_50_steps_128__0)
+and save them inside ``` ns_policies/blendrl/out/ ```.
+
+**Note**: For NUDGE agents to work, exchange the ``` ns_policies/blendrl/in/envs/<GAME> ``` folder for the <GAME> folder used in the branch implementation
 
 ## Run the game using an agent
 
@@ -81,4 +98,12 @@ python render_agent.py -a blendrl -ap ./ns_policies/blendrl/models/kangaroo_demo
 Insight example
 ```
 python render_agent.py -a insight -g Pong -pl selected_actions semantic_actions -ap AGENT_PATH --print-reward
+```
+Neural Agent example
+```
+python render_agent.py -a neural -g Pong -pl selected_actions semantic_actions heat_map -ap AGENT_PATH --print-reward
+```
+NUDGE example
+```
+python render_agent.py -a nudge -g Kangaroo -pl selected_actions semantic_actions heat_map -ap AGENT_PATH --print-reward
 ```
