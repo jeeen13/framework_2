@@ -105,5 +105,5 @@ python render_agent.py -a neural -g Pong -pl selected_actions semantic_actions h
 ```
 NUDGE example
 ```
-python render_agent.py -a nudge -g Kangaroo -pl selected_actions semantic_actions heat_map -ap AGENT_PATH --print-reward
+python render_agent.py -a nudge -g Freeway -pl selected_actions semantic_actions -ap AGENT_PATH --print-reward
 ```
