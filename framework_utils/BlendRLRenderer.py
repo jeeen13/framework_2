@@ -65,7 +65,7 @@ class BlendRLRenderer(BaseRenderer):
         ################################################################################
         # LOAD MODEL AND ENVIRONMENT
         self.model = load_model(agent_path, env_kwargs_override=env_kwargs, device=device)
-        self.env = NudgeBaseEnv.from_name(env_name, mode='blendrl', seed=self.seed, **env_kwargs)
+        self.env = NudgeBaseEnv.from_name(env_name.lower(), mode='blendrl', seed=self.seed, **env_kwargs)
         self.env.reset()
         print(self.model._print())
         self.deterministic = deterministic
