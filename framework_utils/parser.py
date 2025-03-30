@@ -44,7 +44,7 @@ def render_parser():
     opts = parser.parse_args()
 
 
-    env_str = "ALE/" + opts.game +"-v5"
+    env_str = "ALE/" + opts.game.capitalize() +"-v5"
     settings_str = ""
     pruned_ff_name = None
     hide_properties = False
@@ -78,7 +78,7 @@ def render_parser():
         hide_properties = True
 
     exp_name = ""
-    if opts.agent == "scobots":
+    if opts.agent.lower() == "scobots":
         exp_name = opts.game + "_seed" + str(opts.seed) + settings_str
 
     return {
