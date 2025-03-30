@@ -79,7 +79,7 @@ def render_parser():
 
     exp_name = ""
     if opts.agent.lower() == "scobots":
-        exp_name = opts.game + "_seed" + str(opts.seed) + settings_str
+        exp_name = opts.game.capitalize() + "_seed" + str(opts.seed) + settings_str
 
     return {
         "exp_name": exp_name,
