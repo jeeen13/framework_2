@@ -1,4 +1,5 @@
 # Framework
+Jan Eubel, Anh Thi Luu, Pham The Song Nguyen, Jan Niklas Paprotny
 ## Prerequisites
 1. Use Python 3.10
 2. Clone the Repository
