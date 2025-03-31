@@ -11,8 +11,9 @@
    4. ``` object_extraction/HackAtari ``` master
    5. ``` object_extraction/OC_Atari_framework ``` master
 ## Setup
+create venv ``` python -m venv env ``` and activate it then follow the following instructions
 ```
-pip install -r requirements.txt && pip install "stable-baselines3[extras]==2.0.0"
+pip install -U pip && pip install -r requirements.txt && pip install "stable-baselines3[extras]==2.0.0"
 ```
 1. Inside ```ns_policies/blendrl/nsfr/``` run
     ```
@@ -95,7 +96,7 @@ python render_agent.py -a scobots -g Pong -pl selected_actions -ap ./ns_policies
 ```
 blendrl agent downloaded from above playing kangaroo: 
 ``` 
-python render_agent.py -a blendrl -ap ./ns_policies/blendrl/models/kangaroo_demo -g kangaroo
+python render_agent.py -a blendrl -ap ./ns_policies/blendrl/models/kangaroo_demo -pl heat_map logic_valuations selected_actions semantic_actions policy state_usage logic_action_rules -g kangaroo
 ```
 Insight example
 ```
